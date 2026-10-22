@@ -11,8 +11,8 @@ A personal frontend CLI (`wk`/`wkg`/`wkt`) that exposes the harness task-trackin
 - The harness `bd` wrapper is the command being renamed to `wk`: it fronts upstream beads `bd` (starting the per-devtree shared Dolt server) and is the chokepoint that performs the `:scope` rewrite. `bdg`/`bdt` exec it for routed invocations.
 - Observed syntax: `wk :myscope ready`, the in-project form — equivalent to the direct `bd :auth list` grammar defined in the task-scopes spec.
 - The wrapper layer is the universal chokepoint for every `bd` invocation, direct or routed, so `wk` inherits the `:scope` rewrite for free.
-- The task-scopes spec (`_SPECS/task-scopes/SPEC.md`) already settles scope translation: `:scope` → per-subcmd `bd` label parameter, in the wrapper layer; its global open question #1 ("whether `wk` supersedes the `:scope` wrapper syntax") is answered **yes** at the surface level.
-- The routing spec (`_SPECS/cross-devtree-task-routing/SPEC.md`) defines `bdg`/`bdt`, which the rename supersedes as user-facing entry points.
+- The task-scopes spec (`SPEC-READY-task-scopes/SPEC.md`) already settles scope translation: `:scope` → per-subcmd `bd` label parameter, in the wrapper layer; its global open question #1 ("whether `wk` supersedes the `:scope` wrapper syntax") is answered **yes** at the surface level.
+- The routing spec (`SPEC-READY-cross-devtree-task-routing/SPEC.md`) defines `bdg`/`bdt`, which the rename supersedes as user-facing entry points.
 - Harness tooling is Python: extensionless scripts with a `python3` shebang, Nix-packaged (`tooling/devtree/devtree`, `tooling/beads-devtree-init/beads-devtree-init`). The renamed commands follow.
 - No backward compatibility is needed: there are no scripts or habits tied to the old command names.
 - Upstream `bd` is **not** on `PATH`; `wk`/`wkg`/`wkt` carry it inside their Nix closure and invoke it internally. The trio is the only user-facing task surface.

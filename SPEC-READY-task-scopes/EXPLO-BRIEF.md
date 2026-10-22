@@ -2,7 +2,7 @@
 
 ## Motivation
 
-The cross-devtree task routing layer (`bdg`/`bdt`, see `_SPECS/cross-devtree-task-routing/SPEC.md`) is pure addressing: one target resolves to one project's beads workspace, and `bd` runs there unmodified.
+The cross-devtree task routing layer (`bdg`/`bdt`, see `SPEC-READY-cross-devtree-task-routing/SPEC.md`) is pure addressing: one target resolves to one project's beads workspace, and `bd` runs there unmodified.
 It has no way to express that a task belongs to a finer-grained grouping.
 
 A scope is a per-project classification on a task, where a task can sit in several scopes at once.

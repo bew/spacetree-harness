@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The cross-devtree task routing layer (`wkg`/`wkt`, see `_SPECS/cross-devtree-task-routing/SPEC.md`) addresses projects.
+The cross-devtree task routing layer (`wkg`/`wkt`, see `SPEC-READY-cross-devtree-task-routing/SPEC.md`) addresses projects.
 One target resolves to exactly one project, and `wk` runs there unmodified.
 
 That is the right granularity for reaching a project, but not for working inside one: a project holds many tasks, and the routing layer has no way to express a finer grouping of them.
@@ -239,7 +239,7 @@ The layer adds no per-project artifact: nothing is written into a project repo, 
 
 - **A declared scope vocabulary.** No project config lists scopes; no governance or validation beyond the label charset.
 - **A persisted or ambient active scope.** A scope is named per invocation; nothing is stored as a "current scope".
-- **The `wk` frontend.** The `wk`/`wkg`/`wkt` binaries, the `wk` wrapper, and their packaging are owned by `_SPECS/wk-beads-wrappers/SPEC.md`.
+- **The `wk` frontend.** The `wk`/`wkg`/`wkt` binaries, the `wk` wrapper, and their packaging are owned by `SPEC-READY-wk-beads-wrappers/SPEC.md`.
 - **Aggregate or cross-project scope queries.** As in the routing spec, one invocation targets one project; there is no `wkg all :auth`.
 - **`bd` itself** and its label model, which the scope layer only rides on.
 - **The `wk` wrapper's lifecycle.** It belongs to the frontend spec; this spec only relies on it to perform the rewrite.
@@ -287,14 +287,14 @@ $ wkg self:ghh --scope auth list
 
 ## Related artifacts
 
-- `_SPECS/cross-devtree-task-routing/SPEC.md` — the routing layer this builds on; defines `wkg`/`wkt` and reserves the `:scope` target segment.
-- `EXPLORATION-scope-model.md`, `EXPLORATION-scope-translation.md` in this directory — the pre-spec design record for the scope model and the rewrite.
+- `SPEC-READY-cross-devtree-task-routing/SPEC.md` — the routing layer this builds on; defines `wkg`/`wkt` and reserves the `:scope` target segment.
+- `EXPLO-scope-model.md`, `EXPLO-scope-translation.md` in this directory — the pre-spec design record for the scope model and the rewrite.
 - `docs/beads-refs/` — the `bd` data model and how-to, including labels and the per-subcmd label flags the rewrite targets.
 - `HANDOFF-20260920-beads-shared-server-devtree.md` — the `wk` wrapper this spec's rewrite rides in (one shared Dolt socket per devtree).
-- `_SPECS/wk-beads-wrappers/SPEC.md` — the `wk`/`wkg`/`wkt` frontend; its `wk` wrapper is where this spec's rewrite lives.
+- `SPEC-READY-wk-beads-wrappers/SPEC.md` — the `wk`/`wkg`/`wkt` frontend; its `wk` wrapper is where this spec's rewrite lives.
 - `README.md` — the devtree definition and the human-first constraint this design follows.
 
 ## Global Open Questions
 
 1. Whether the personal frontend CLI (`wk`) supersedes the `:scope` wrapper syntax.
-   Resolved: yes. The `wk`/`wkg`/`wkt` frontend supersedes the `:scope` wrapper syntax at the surface; see `_SPECS/wk-beads-wrappers/SPEC.md`.
+   Resolved: yes. The `wk`/`wkg`/`wkt` frontend supersedes the `:scope` wrapper syntax at the surface; see `SPEC-READY-wk-beads-wrappers/SPEC.md`.

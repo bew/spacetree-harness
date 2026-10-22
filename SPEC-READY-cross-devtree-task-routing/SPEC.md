@@ -13,7 +13,7 @@ There is no way to address a different project, or a different devtree, from a s
 They take a user-typed target, resolve it to exactly one workspace, and route the invocation there: move to that directory, then exec `wk`.
 They are pure routing — one command, one project — and deliberately do not reimplement `wk`.
 
-The user-facing surface is the `wk`/`wkg`/`wkt` frontend; see `_SPECS/wk-beads-wrappers/SPEC.md`.
+The user-facing surface is the `wk`/`wkg`/`wkt` frontend; see `SPEC-READY-wk-beads-wrappers/SPEC.md`.
 
 The layer serves the human first, per the harness constraint in `README.md`: short commands, from anywhere, with agent support as a layer on top.
 Two entry points cover the two situations a person works from.
@@ -148,7 +148,7 @@ $ wkg ghh list
 Routing adds no rewriting of its own, save for one: a target's `:scope` segment is turned into `bd` label arguments by the `wk` wrapper before it invokes `bd` (see the task-scopes spec). There is no other output rewriting or query interception.
 
 `wkg`/`wkt` stream `wk`'s output and propagate its exit status, so they are transparent for piping and scripting.
-Exec'ing `wk` from `PATH` is deliberate: it lets the target devtree's `wk` wrapper start and attach its shared Dolt server, and reach the bundled `bd` (see `_SPECS/wk-beads-wrappers/SPEC.md` and *Placement / Scope*).
+Exec'ing `wk` from `PATH` is deliberate: it lets the target devtree's `wk` wrapper start and attach its shared Dolt server, and reach the bundled `bd` (see `SPEC-READY-wk-beads-wrappers/SPEC.md` and *Placement / Scope*).
 
 ## Resolution rules
 
@@ -231,7 +231,7 @@ A devtree project registry only changes through interaction or an explicit `refr
 
 ### State placement
 
-- Devtree project registries live under `<devtree>/.state/`, alongside other devtree state (see `_SPECS/devtree-daemons/SPEC.md`); they are never committed to a project repo.
+- Devtree project registries live under `<devtree>/.state/`, alongside other devtree state (see `SPEC-READY-devtree-daemons/SPEC.md`); they are never committed to a project repo.
 - The known-devtrees list lives under `$XDG_STATE_HOME/devtree-global/`.
 - `wkg`/`wkt` write no state inside a project repo; a project only ever carries its `.beads/` workspace.
 
@@ -244,7 +244,7 @@ A devtree project registry only changes through interaction or an explicit `refr
 ### Out of scope
 
 - **Aggregate or cross-project reporting.** `wkg`/`wkt` route one command to one project; there is no `wkg all …`.
-- **The `wk` frontend.** The `wk`/`wkg`/`wkt` binaries, the `wk` wrapper, its packaging, and its `wk init` are owned by `_SPECS/wk-beads-wrappers/SPEC.md`; this spec only relies on `wk` being on `PATH`.
+- **The `wk` frontend.** The `wk`/`wkg`/`wkt` binaries, the `wk` wrapper, its packaging, and its `wk init` are owned by `SPEC-READY-wk-beads-wrappers/SPEC.md`; this spec only relies on `wk` being on `PATH`.
 - **Registry management commands.** `devtree registry lazy-register` and `devtree registry refresh` belong to the `devtree` CLI; this spec fixes only their contract.
 - **Scope semantics.** The `:scope` model and its translation into `bd` label arguments belong to the task-scopes spec; this spec only reserves the optional third target segment.
 - **`bd` itself** and its issue model, which `wkg`/`wkt` do not reimplement.
@@ -289,12 +289,12 @@ $ wkg all list --status=open       # every project, every devtree
 
 ## Related artifacts
 
-- `_SPECS/wk-beads-wrappers/SPEC.md` — the `wk`/`wkg`/`wkt` task frontend this spec routes through; owns the `wk` wrapper, its packaging, and `wk init`.
+- `SPEC-READY-wk-beads-wrappers/SPEC.md` — the `wk`/`wkg`/`wkt` task frontend this spec routes through; owns the `wk` wrapper, its packaging, and `wk init`.
 - `HANDOFF-20260920-beads-shared-server-devtree.md` — the `wk` wrapper's per-devtree shared Dolt server (one socket per devtree).
 - `README.md` — the devtree definition, the human-first constraint, and the tooling inventory.
 - `docs/beads-refs/` — the `bd` data model, how-to, and tag vocabulary, including the `issue_prefix` and `external:<project>:<capability>` mechanics this spec leans on.
-- `_SPECS/devtree-daemons/SPEC.md` — the `<devtree>/.state/` convention and the one-server-per-devtree pattern.
-- `EXPLORATION-*.md` in this directory — the pre-spec design record (resolver-core, registry, routing-vs-aggregate, bd-wrapper-interaction).
-- `_SPECS/task-scopes/SPEC.md` — the task-scopes spec: the `:scope` model and how the third target segment is translated into `bd` label arguments.
+- `SPEC-READY-devtree-daemons/SPEC.md` — the `<devtree>/.state/` convention and the one-server-per-devtree pattern.
+- `EXPLO-*.md` in this directory — the pre-spec design record (resolver-core, registry, routing-vs-aggregate, bd-wrapper-interaction).
+- `SPEC-READY-task-scopes/SPEC.md` — the task-scopes spec: the `:scope` model and how the third target segment is translated into `bd` label arguments.
 
 ## Global Open Questions

@@ -30,7 +30,7 @@ The host and token shape are settled; the open questions are how a scope segment
 - (settled) Writes assign membership: `create` → `--labels scope:X`; `update` → `--add-label scope:X`.
 - (settled) Verbs with no label param (`close`, `show`, `dep`, …): the scope is ignored with a warning (not an error).
 - (settled) `bd query` is supported: `bd :auth query "…"` injects `label=scope:X AND …` into the query string.
-- (settled) The routing spec (`_SPECS/cross-devtree-task-routing/SPEC.md`) is amended now to permit the scope rewrite in `bdg`/`bdt`.
+- (settled) The routing spec (`SPEC-READY-cross-devtree-task-routing/SPEC.md`) is amended now to permit the scope rewrite in `bdg`/`bdt`.
 
 ## Candidate directions
 

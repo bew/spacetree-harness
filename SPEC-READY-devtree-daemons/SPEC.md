@@ -139,7 +139,7 @@ Only the no-wrapper option is genuinely simpler; PCS wins on grouping and script
 - **Devtree context plugin** (`integrations/opencode-plugin/devtree-context.ts`) — resolves the marker for agent support; shares the devtree-root notion this spec relies on.
 - **Beads shared-server handoff** (`HANDOFF-20260920-beads-shared-server-devtree.md`) — the prior decision to run one Dolt server per devtree under `<devtree>/.state/`; this spec generalizes that single-server-per-devtree pattern to PCS.
 - **process-compose upstream docs** — the source for the config schema (`processes`, `namespace`, `up -D`) and the client subcommands the wrapper forwards.
-- **Exploration files** in this directory (`EXPLORATION-BRIEF.md`, `EXPLORATION-backend.md`, `EXPLORATION-pcs-wrapper.md`, `EXPLORATION-nix-process-tree.md`) — record the backend and interface discussion this spec condenses.
+- **Exploration files** in this directory (`EXPLO-BRIEF.md`, `EXPLO-backend.md`, `EXPLO-pcs-wrapper.md`, `EXPLO-nix-process-tree.md`) — record the backend and interface discussion this spec condenses.
 - **`README.md`** — lists the devtree config, tree-scoped definitions, and `.state/`-style gaps this feature sits beside.
 
 ## Global Open Questions

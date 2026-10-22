@@ -14,8 +14,8 @@ Upstream beads `bd` is an implementation detail: it is not on `PATH` and is only
 
 This spec covers only what is specific to the frontend surface.
 
-Routing target grammar and the `wkg`/`wkt` delegation mechanism are owned by `_SPECS/cross-devtree-task-routing/SPEC.md`.
-The `:scope` syntax and its translation table are owned by `_SPECS/task-scopes/SPEC.md`.
+Routing target grammar and the `wkg`/`wkt` delegation mechanism are owned by `SPEC-READY-cross-devtree-task-routing/SPEC.md`.
+The `:scope` syntax and its translation table are owned by `SPEC-READY-task-scopes/SPEC.md`.
 Neither is re-specified here.
 
 ## Naming & IDs
@@ -42,8 +42,8 @@ Run `wk` from inside a project for in-project tasks.
 Run `wkt <target>` for tasks elsewhere in the same devtree.
 Run `wkg <target>` for tasks across devtrees.
 
-The `<target>` grammar and the `wkg`/`wkt` resolution-and-delegation mechanism are specified in `_SPECS/cross-devtree-task-routing/SPEC.md`.
-The `:scope` segment and its translation are specified in `_SPECS/task-scopes/SPEC.md`.
+The `<target>` grammar and the `wkg`/`wkt` resolution-and-delegation mechanism are specified in `SPEC-READY-cross-devtree-task-routing/SPEC.md`.
+The `:scope` segment and its translation are specified in `SPEC-READY-task-scopes/SPEC.md`.
 
 Both are referenced here, not restated.
 
@@ -96,8 +96,8 @@ Non-blocking. `wk init` is specified here as a standalone command.
 
 Linking this frontend into the existing specs required the following edits, now applied:
 
-- `_SPECS/cross-devtree-task-routing/SPEC.md`: renamed the user-facing entry points `bdg`/`bdt` to `wkg`/`wkt`, replaced the "exec `bd` from `PATH`" clause with exec'ing `wk`, and pointed its out-of-scope `bd`-wrapper item at this spec.
-- `_SPECS/task-scopes/SPEC.md`: answered Global Open Question #1 as yes — the frontend supersedes the `:scope` wrapper syntax at the surface — and replaced the "a separate `wk` binary is out of scope" note, which was stale.
+- `SPEC-READY-cross-devtree-task-routing/SPEC.md`: renamed the user-facing entry points `bdg`/`bdt` to `wkg`/`wkt`, replaced the "exec `bd` from `PATH`" clause with exec'ing `wk`, and pointed its out-of-scope `bd`-wrapper item at this spec.
+- `SPEC-READY-task-scopes/SPEC.md`: answered Global Open Question #1 as yes — the frontend supersedes the `:scope` wrapper syntax at the surface — and replaced the "a separate `wk` binary is out of scope" note, which was stale.
 
 The routing and scope semantics themselves are unchanged.
 
@@ -115,8 +115,8 @@ In scope:
 
 Out of scope:
 
-- Routing target grammar and the `wkg`/`wkt` resolution-and-delegation mechanism — owned by `_SPECS/cross-devtree-task-routing/SPEC.md`.
-- `:scope` syntax and its translation table — owned by `_SPECS/task-scopes/SPEC.md`.
+- Routing target grammar and the `wkg`/`wkt` resolution-and-delegation mechanism — owned by `SPEC-READY-cross-devtree-task-routing/SPEC.md`.
+- `:scope` syntax and its translation table — owned by `SPEC-READY-task-scopes/SPEC.md`.
 - Upstream beads `bd` behavior, and cross-project aggregation.
 
 ## Alternatives & Tradeoffs
@@ -154,9 +154,9 @@ Rejected in favor of `wk`/`wkg`/`wkt`.
 
 ## Related artifacts
 
-- `_SPECS/cross-devtree-task-routing/SPEC.md` — target grammar and `wkg`/`wkt` delegation.
-- `_SPECS/task-scopes/SPEC.md` — `:scope` syntax and translation.
+- `SPEC-READY-cross-devtree-task-routing/SPEC.md` — target grammar and `wkg`/`wkt` delegation.
+- `SPEC-READY-task-scopes/SPEC.md` — `:scope` syntax and translation.
 - `HANDOFF-20260920-beads-shared-server-devtree.md` — per-devtree shared Dolt server.
-- `_SPECS/wk-beads-wrappers/EXPLORATION-frontend-cli.md` — the exploration that settled this design.
+- `SPEC-READY-wk-beads-wrappers/EXPLO-frontend-cli.md` — the exploration that settled this design.
 - `docs/beads-refs/` — the upstream beads reference.
 - `README.md` — the harness overview and tooling conventions.
