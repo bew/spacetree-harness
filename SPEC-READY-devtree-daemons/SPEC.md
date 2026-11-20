@@ -29,7 +29,8 @@ Implementation is future work; this document fixes the design.
 
 ## Naming & IDs
 
-- **Init command**: `devtree init` — scaffolds the devtree, creating the `.devtree-root` marker and writing a basic `process-compose.yaml` when none exists.
+- **Devtree marker**: `.devtree-root`, a symlink whose target is the devtree config repo (see `<spec:devtree-config-repo>`); root resolution resolves that target, and the devtree root is the directory holding the symlink.
+- **Init command**: `devtree init` — scaffolds the devtree, creating the `.devtree-root` symlink to the config repo, the state branch worktree at `.state/beads-by-project/`, and a basic `process-compose.yaml` when none exists.
 - **Wrapper command**: `devtree procs [args…]` — with no arguments it prints a status overview of the devtree's processes (initially by delegating to a PCS status subcommand); with arguments, every argument after `procs` is forwarded verbatim to PCS.
 - **Ensure command**: `devtree procs-ensure <namespace>` — takes one positional argument, the process set to ensure.
 - **Attach command**: `devtree procs-attach` — attaches the interactive TUI to the running server; quitting the TUI does not stop the server.
@@ -65,7 +66,8 @@ Quitting the TUI detaches the client and leaves the server and its processes run
 
 `process-compose.yaml` at the devtree root declares the processes, each assigned to a namespace.
 
-`devtree init` scaffolds a devtree: it creates the `.devtree-root` marker in the current directory and writes a basic `process-compose.yaml` if none exists.
+`devtree init` scaffolds a devtree: it creates the `.devtree-root` symlink to the devtree config repo in the current directory, checks out the state branch at `.state/beads-by-project/`, and writes a basic `process-compose.yaml` if none exists.
+Creating the symlink and the worktree requires a config repo, so init either creates one or refuses when none exists (see *Global Open Questions* in `<spec:devtree-config-repo>`).
 It never overwrites an existing config, so it is safe to re-run.
 
 ## Lifecycle & State
@@ -101,6 +103,7 @@ The root is the fixed location because PCS auto-discovers the file from the work
 
 Runtime state lives under the devtree's `.state/` directory, with the socket at `<devtree root>/.state/process-compose.sock`.
 `.state/` is a devtree-wide convention, created lazily by whatever tooling needs it.
+`.state/beads-by-project/` is the one versioned exception: it is a git worktree of the config repo's state branch, not throwaway runtime state (see `<spec:beads-out-of-tree-storage>`).
 
 The feature targets macOS only for now.
 
@@ -108,7 +111,7 @@ In scope: the `devtree` process command family (`procs`, `procs-ensure`, `procs-
 Out of scope: defining the process tree from Nix (deferred), restart policies and healthchecks, one-shot processes (long-running only), alternative supervision backends, and cross-devtree coordination.
 
 One placement wrinkle: the devtree root is not itself a git repo, so a hand-written `process-compose.yaml` placed there is not version-controlled by default.
-That is accepted for now; tracking the config is left to the deferred Nix-managed process tree.
+That is accepted for now; moving the file into the config repo, which is versioned, is an open question in `<spec:devtree-config-repo>`.
 
 ## Alternatives & Tradeoffs
 
@@ -135,8 +138,9 @@ Only the no-wrapper option is genuinely simpler; PCS wins on grouping and script
 
 ## Related artifacts
 
-- **Existing devtree CLI** (`pkgs/devtree/devtree`) — already resolves the enclosing devtree by walking up for the `.devtree-root` marker; `devtree procs` and `devtree init` build on that same resolution.
+- **Existing devtree CLI** (`pkgs/devtree/devtree`) — already resolves the enclosing devtree by walking up for the `.devtree-root` marker; `devtree procs` and `devtree init` build on that same resolution, extended to follow the marker symlink.
 - **Devtree context plugin** (`integrations/opencode-plugin/devtree-context.ts`) — resolves the marker for agent support; shares the devtree-root notion this spec relies on.
+- **Devtree config repo spec** (`<spec:devtree-config-repo>`) — defines the marker symlink, the config repo, and the state branch that backs `<devtree>/.state/beads-by-project/`.
 - **Beads shared-server handoff** (`HANDOFF-20260920-beads-shared-server-devtree.md`) — the prior decision to run one Dolt server per devtree under `<devtree>/.state/`; this spec generalizes that single-server-per-devtree pattern to PCS.
 - **process-compose upstream docs** — the source for the config schema (`processes`, `namespace`, `up -D`) and the client subcommands the wrapper forwards.
 - **Exploration files** in this directory (`EXPLO-BRIEF.md`, `EXPLO-backend.md`, `EXPLO-pcs-wrapper.md`, `EXPLO-nix-process-tree.md`) — record the backend and interface discussion this spec condenses.
