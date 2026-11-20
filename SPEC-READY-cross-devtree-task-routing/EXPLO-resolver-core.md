@@ -4,7 +4,7 @@
 
 - `bd` resolves a workspace by walking up for `.beads/`; it has no concept of multiple devtrees.
 - Devtree root detection is already solved: `.devtree-root` marker plus `devtree root --json`, which prints `{name, path}`.
-- `issue_prefix` is assigned per project at init time by `beads-devtree-init` (`--prefix`, interactive prompt); it is the identity `bd` filters every query on.
+- `issue_prefix` is assigned per project at init time by `wk init` (`--prefix`, interactive prompt); it is the identity `bd` filters every query on.
 - Addressing candidate grammar from the originating handoff: `bdg <devtree>:<project>`, `bdg <project>`, `bdg <devtree>`, and `bdt` (devtree pre-resolved from cwd).
 - Gas City's `gc bd --rig <name>` establishes the ceiling for cross-devtree routing: chdir + exec, no cross-rig joining.
 

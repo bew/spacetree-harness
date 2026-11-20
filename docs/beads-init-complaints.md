@@ -1,8 +1,8 @@
 # Beads `bd init` — Complaints & Desired Behavior
 
-This document records what the stock `bd init` does wrong in this devtree, and what `beads-devtree-init` must do instead.
-`beads-devtree-init` is a narrow wrapper around `bd init` that performs beads setup for a devtree project.
-Status: draft — complaints and desired behavior captured; wrapper design and the beads text added to `AGENTS.md` are not settled yet.
+This document records what the stock `bd init` does wrong in this devtree, and what `wk init` must do instead.
+`wk init` is the project bootstrap specified in [`SPEC-READY-wk-init`](../SPEC-READY-wk-init/SPEC.md); its beads step is a narrow wrapper around `bd init`.
+Status: draft — complaints captured; the command design is settled in that spec, while the beads text added to `AGENTS.md` is not.
 
 ## Context
 
@@ -62,8 +62,8 @@ The complaints fall into several themes:
 
 ## Desired behavior
 
-`beads-devtree-init` must produce only what the harness wants, and make the rest an explicit choice.
-An earlier `repo-init` step creates the initial `AGENTS.md`, and other steps will edit it too; this wrapper only adds its own beads content to a file that already exists.
+`wk init` must produce only what the harness wants, and make the rest an explicit choice.
+An earlier `repo-init` step creates the initial `AGENTS.md`, and other steps will edit it too; the beads step only adds its own content to a file that already exists.
 
 - Drive `bd init` with flags rather than accepting its defaults.
 - Suppress agent/Claude artifact generation with `--skip-agents`.
@@ -78,10 +78,10 @@ An earlier `repo-init` step creates the initial `AGENTS.md`, and other steps wil
 
 ## Open questions
 
-- Wrapper home and name for `beads-devtree-init`, and how it is invoked from the broader init sequence (described in README).
+- Wrapper home and name: settled as `wk init`, see [`SPEC-READY-wk-init`](../SPEC-READY-wk-init/SPEC.md).
 - Git hooks: disable entirely, or keep a reduced set; if reduced, what stays and how commit cost is kept low.
-- What `beads-devtree-init` adds to `AGENTS.md` (deferred until this doc is complete): a custom minimal block via `--agents-template`, or no beads text at all.
+- What `wk init` adds to `AGENTS.md` (deferred until this doc is complete): a custom minimal block via `--agents-template`, or no beads text at all.
 - Keep or drop the root `.gitignore` lines that `bd init` added.
-- How to stop the auto-commit: is there a `bd init` flag or config, or must the wrapper reset it after the fact?
+- How to stop the auto-commit: settled — the workspace is out of tree, so `wk init` never commits (see the out-of-tree storage spec).
 - Whether any complaint should go upstream to beads, e.g. the `pre-commit` `git add` failure when the export yields zero issues.
 - Whether hook slowness is worth a separate performance follow-up, and what form it takes.

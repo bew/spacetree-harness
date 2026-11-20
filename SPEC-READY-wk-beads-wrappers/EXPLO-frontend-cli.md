@@ -11,13 +11,13 @@ A personal frontend CLI (`wk`/`wkg`/`wkt`) that exposes the harness task-trackin
 - The harness `bd` wrapper is the command being renamed to `wk`: it fronts upstream beads `bd` (starting the per-devtree shared Dolt server) and is the chokepoint that performs the `:scope` rewrite. `bdg`/`bdt` exec it for routed invocations.
 - Observed syntax: `wk :myscope ready`, the in-project form — equivalent to the direct `bd :auth list` grammar defined in the task-scopes spec.
 - The wrapper layer is the universal chokepoint for every `bd` invocation, direct or routed, so `wk` inherits the `:scope` rewrite for free.
-- The task-scopes spec (`SPEC-READY-task-scopes/SPEC.md`) already settles scope translation: `:scope` → per-subcmd `bd` label parameter, in the wrapper layer; its global open question #1 ("whether `wk` supersedes the `:scope` wrapper syntax") is answered **yes** at the surface level.
-- The routing spec (`SPEC-READY-cross-devtree-task-routing/SPEC.md`) defines `bdg`/`bdt`, which the rename supersedes as user-facing entry points.
+- The task-scopes spec (`<spec:task-scopes>`) already settles scope translation: `:scope` → per-subcmd `bd` label parameter, in the wrapper layer; its global open question #1 ("whether `wk` supersedes the `:scope` wrapper syntax") is answered **yes** at the surface level.
+- The routing spec (`<spec:cross-devtree-task-routing>`) defines `bdg`/`bdt`, which the rename supersedes as user-facing entry points.
 - Harness tooling is Python: extensionless scripts with a `python3` shebang, Nix-packaged (`tooling/devtree/devtree`, `tooling/beads-devtree-init/beads-devtree-init`). The renamed commands follow.
 - No backward compatibility is needed: there are no scripts or habits tied to the old command names.
 - Upstream `bd` is **not** on `PATH`; `wk`/`wkg`/`wkt` carry it inside their Nix closure and invoke it internally. The trio is the only user-facing task surface.
 - The routing spec's `exec bd from PATH` wrapper mechanism is superseded: wrapper logic (server attach + `:scope` rewrite) moves into `wk`, and `wkg`/`wkt` exec `wk` (see *Decisions*).
-- `tooling/beads-devtree-init/beads-devtree-init` (the harness-safe `bd init` wrapper: resolves `.devtree-root`, refuses if `.beads/` exists, runs `bd init --stealth --skip-agents --skip-hooks`, undoes bd's auto-commit, force-tracks the wanted `.beads` files, installs beads skills) relocates into `wk-beads-wrappers/` and becomes the `wk init` implementation. `init` is thus the one verb `wk` intercepts rather than forwarding to `bd`.
+- `tooling/beads-devtree-init/beads-devtree-init` (the draft `bd init` wrapper: resolves `.devtree-root`, refuses if `.beads/` exists, runs `bd init --stealth --skip-agents --skip-hooks`, undoes bd's auto-commit, force-tracks the wanted `.beads` files, installs beads skills) is superseded rather than relocated: `wk` intercepts the `init` verb, and the workflow it runs is owned by `<spec:wk-init>`. `init` is thus the one verb `wk` intercepts rather than forwarding to `bd`.
 
 ## Design crux
 
@@ -35,7 +35,7 @@ Sub-cruxes: whether the old names are retired or kept as aliases, and whether `w
 - (settled) **Names.** `wk` = work, `wkg` = work-global (cross-devtree), `wkt` = work-devtree (in-devtree). `wk` is the binary name; "work" avoids the overloaded `task`/`ticket` terminology used across agent tooling and Jira.
 - (settled) **Implementation location.** `wk-beads-wrappers/`.
 - (settled) **Supersedes the routing spec's user-facing entry points.** `bdg`/`bdt` are no longer the names the user types; the routing spec needs amending, and the task-scopes spec's global open question #1 is answered **yes**.
-- (settled) **`wk init` is the relocated `beads-devtree-init`.** `wk` intercepts the `init` verb to run the harness-safe devtree bootstrap; plain `bd init` is not forwarded via `wk`. The one deliberate exception to "pure forward".
+- (settled) **`wk init` is a new project bootstrap, not a relocation of `beads-devtree-init`.** `wk` intercepts the `init` verb to run the harness bootstrap; plain `bd init` is not forwarded via `wk`. The draft never ran in a project and its in-repo behaviors are dropped; the workflow is owned by `<spec:wk-init>`. The one deliberate exception to "pure forward".
 - (settled) **Rejected names.** `t`/`tg`/`tt` and `tk`/`tkg`/`tkt` — both carry the overloaded `task`/`ticket` connotation; `wk`/`wkg`/`wkt` is the chosen set.
 - (settled) **Spec scope.** Frontend only: define the `wk`/`wkg`/`wkt` family, the delegation model, the bundled `bd`, and `wk init`; amend the routing and task-scopes specs rather than absorbing them.
 
