@@ -2,9 +2,9 @@
 
 ## Introduction
 
-Beads (`bd`) tracks work in a single repository.
-It finds its workspace by walking up for a `.beads/` directory and scopes every query to that workspace's `issue_prefix`.
+Beads (`bd`) tracks work in a single workspace, which it locates from `BEADS_DIR` when the wrapper sets it; every query inside that workspace is scoped to its own `issue_prefix`.
 That model is exactly right inside one project, which is why per-project isolation needs no extra tooling.
+The workspace itself is no longer assumed to live in the repository: see `<spec:beads-out-of-tree-storage>`.
 
 It has no notion, however, of the many independent projects a developer keeps on one machine, nor of the devtrees that group them (see `README.md` for the devtree definition).
 There is no way to address a different project, or a different devtree, from a shell without changing directory first, and no coherent scheme for naming such a target.
@@ -13,7 +13,7 @@ There is no way to address a different project, or a different devtree, from a s
 They take a user-typed target, resolve it to exactly one workspace, and route the invocation there: move to that directory, then exec `wk`.
 They are pure routing — one command, one project — and deliberately do not reimplement `wk`.
 
-The user-facing surface is the `wk`/`wkg`/`wkt` frontend; see `SPEC-READY-wk-beads-wrappers/SPEC.md`.
+The user-facing surface is the `wk`/`wkg`/`wkt` frontend; see `<spec:wk-beads-wrappers>`.
 
 The layer serves the human first, per the harness constraint in `README.md`: short commands, from anywhere, with agent support as a layer on top.
 Two entry points cover the two situations a person works from.
@@ -22,7 +22,7 @@ Two entry points cover the two situations a person works from.
 `wkt` is the in-devtree form: it resolves the enclosing devtree from the current directory and only ever reads that devtree's project registry.
 
 The design stays within the precedent set by Gas City's `gc bd --rig <name>`, which routes by changing directory and exec'ing `bd` unmodified.
-It also leans on beads' own shared-server model, where one Dolt server per devtree keeps projects logically isolated by `issue_prefix`.
+Routing therefore stays a matter of choosing a directory, not of reimplementing the query layer.
 
 
 ## Terminology & Key Concepts
@@ -48,11 +48,11 @@ The logic that maps a target to exactly one beads workspace, or rejects it as am
 Tooling that resolves the enclosing devtree and follows harness conventions, such as calling `devtree registry lazy-register` on interaction.
 
 **devtree root** (new!):
-The directory carrying the `.devtree-root` marker; the enclosing devtree is found by walking up to it (see `README.md`).
+The directory carrying the `.devtree-root` marker, a symlink whose target is the devtree config repo; the enclosing devtree is found by walking up to it (see `<spec:devtree-config-repo>`).
 
 **devtree project registry** (new!):
 A devtree's own lazy index of its projects, stored under `<devtree>/.state/`.
-A project appears once devtree-aware tooling has interacted with it inside that devtree.
+A project appears once devtree-aware tooling has interacted with it inside that devtree, and is identified by its project key.
 
 **known-devtrees list** (new!):
 The global list of known devtrees, held as name and path under `$XDG_STATE_HOME/devtree-global/`.
@@ -74,23 +74,24 @@ Resolving a bare project across every known devtree's project registry, used by 
 
 **Target forms**:
 
-```
+```pseudocode
 target    := address [ ":" scope ]
 address   := qualified | bare-project | bare-devtree
-qualified := <devtree-name> ":" <project-prefix>
+qualified := <devtree-name> ":" <project-key>
 ```
 
 - `address` — the routing target proper: a devtree and/or a project.
 - `qualified` — `work:cmdo-nix`.
 - `bare-project` — `cmdo-nix`.
 - `bare-devtree` — `work`.
+- `project-key` — the project's declared key (see `<spec:project-info>`), not its beads prefix.
 - `scope` — optional third segment (`work:cmdo-nix:auth`), rewritten into `bd` label arguments; see *Routing semantics* and the task-scopes spec.
 
 **Command shape**:
 
-```
+```sh
 wkg <target> [bd-args…]
-wkt <project-prefix> [bd-args…]     # devtree taken from cwd
+wkt <project-key> [bd-args…]     # devtree taken from cwd
 ```
 
 The first positional argument is always the target; everything after it is forwarded verbatim to `wk`.
@@ -102,36 +103,37 @@ Both commands take a target as their first positional argument and forward every
 
 ### `wkg` — cross-devtree routing
 
-```
+```sh
 # Qualified: devtree and project named explicitly. Resolves from anywhere.
-$ wkg self:ghh list --status=open
+wkg self:ghh list --status=open
 
 # Bare project.
 # Inside a devtree, resolved in that devtree only.
 # Outside a devtree, resolved across all known devtrees.
-$ wkg cmdo-nix ready
+wkg cmdo-nix ready
 
 # Bare devtree: targets the devtree root's own scope.
-$ wkg work list
+wkg work list
 
 # Arguments are forwarded verbatim, including cross-project dependency targets.
-$ wkg work:cmdo-nix dep add commando-nix-a1b2 external:ghh:build
+# The external: argument is stored by bd as an edge it never resolves; see Global Open Questions.
+wkg work:cmdo-nix dep add commando-nix-a1b2 external:ghh:build
 ```
 
 ### `wkt` — in-devtree routing
 
-```
+```sh
 # Devtree taken from the current directory; only the project is named.
-$ wkt ghh list
-$ wkt cmdo-nix ready
+wkt ghh list
+wkt cmdo-nix ready
 
 # Same, from anywhere under the devtree.
-$ cd ~/self/my-projects/ghh/subdir && wkt cmdo-nix list
+cd ~/self/my-projects/ghh/subdir && wkt cmdo-nix list
 ```
 
 ### Ambiguity and errors
 
-```
+```console
 # Outside a devtree, a colliding bare project is rejected, never guessed:
 $ wkg api list
 !! ERROR: 'api' is ambiguous across devtrees: self, work
@@ -148,7 +150,7 @@ $ wkg ghh list
 Routing adds no rewriting of its own, save for one: a target's `:scope` segment is turned into `bd` label arguments by the `wk` wrapper before it invokes `bd` (see the task-scopes spec). There is no other output rewriting or query interception.
 
 `wkg`/`wkt` stream `wk`'s output and propagate its exit status, so they are transparent for piping and scripting.
-Exec'ing `wk` from `PATH` is deliberate: it lets the target devtree's `wk` wrapper start and attach its shared Dolt server, and reach the bundled `bd` (see `SPEC-READY-wk-beads-wrappers/SPEC.md` and *Placement / Scope*).
+Exec'ing `wk` from `PATH` is deliberate: it lets the target project's `wk` wrapper resolve the project info and set up its beads workspace (`BEADS_DIR`), then reach the bundled `bd` (see `<spec:wk-beads-wrappers>` and *Placement / Scope*).
 
 ## Resolution rules
 
@@ -160,11 +162,11 @@ The enclosing devtree is found by walking up for the `.devtree-root` marker.
 A bare name is matched against devtree names first.
 On a match, the target is the devtree root's own scope.
 
-Devtree names are global and win over any project prefix of the same spelling, so `wkg work` always means the devtree `work`, never a project named `work`.
+Devtree names are global and win over any project key of the same spelling, so `wkg work` always means the devtree `work`, never a project named `work`.
 
 When the bare name is not a devtree name, it is treated as a project and resolved by scope:
 - Current directory inside a devtree: resolved in that devtree's project registry only.
-  Other devtrees are never consulted, so a project prefix that also exists elsewhere is not a collision.
+  Other devtrees are never consulted, so a project key that also exists elsewhere is not a collision.
 - Current directory outside any devtree: resolved across every known devtree's project registry.
 
 NOTE: The devtree project registry is lazy-only, so an in-devtree bare project resolves only once something has registered it — typically a prior interaction inside it.
@@ -178,7 +180,7 @@ The qualified form is always available and is the way to reach a project in anot
 ### Collisions
 
 - Outside a devtree, a bare project name that matches more than one devtree is rejected, never tie-broken: the error lists the candidate devtrees and asks for the qualified form.
-- Prefixes are not required to be globally unique.
+- Project keys are not required to be globally unique.
   Collisions are handled here, at resolution time, not enforced at creation.
 
 ### Misses
@@ -201,7 +203,7 @@ This spec defines the contract `wkg`/`wkt` rely on; the registry's own commands 
 ### Devtree project registry
 
 Each devtree keeps its own index of its projects under `<devtree>/.state/`.
-A project enters the index once devtree-aware tooling interacts with it inside that devtree; its identity is the `issue_prefix`.
+A project enters the index once devtree-aware tooling interacts with it inside that devtree; its identity is its project key, and the entry records the project key and repository path.
 
 The index is lazy-only: no scan, no TTL, and a project never interacted with stays absent.
 `devtree registry refresh` is the explicit escape hatch that rebuilds a devtree's index.
@@ -231,9 +233,9 @@ A devtree project registry only changes through interaction or an explicit `refr
 
 ### State placement
 
-- Devtree project registries live under `<devtree>/.state/`, alongside other devtree state (see `SPEC-READY-devtree-daemons/SPEC.md`); they are never committed to a project repo.
+- Devtree project registries live under `<devtree>/.state/`, alongside other devtree state (see `<spec:devtree-daemons>`); they are never committed to a project repo.
 - The known-devtrees list lives under `$XDG_STATE_HOME/devtree-global/`.
-- `wkg`/`wkt` write no state inside a project repo; a project only ever carries its `.beads/` workspace.
+- `wkg`/`wkt` write no state inside a project repo; a project carries only its project info file (tracked, or a linked symlink), and its beads workspace lives under the devtree's `.state/` (see `<spec:beads-out-of-tree-storage>`).
 
 ### In scope
 
@@ -244,7 +246,7 @@ A devtree project registry only changes through interaction or an explicit `refr
 ### Out of scope
 
 - **Aggregate or cross-project reporting.** `wkg`/`wkt` route one command to one project; there is no `wkg all …`.
-- **The `wk` frontend.** The `wk`/`wkg`/`wkt` binaries, the `wk` wrapper, its packaging, and its `wk init` are owned by `SPEC-READY-wk-beads-wrappers/SPEC.md`; this spec only relies on `wk` being on `PATH`.
+- **The `wk` frontend.** The `wk`/`wkg`/`wkt` binaries, the `wk` wrapper, its packaging, and its `wk init` are owned by `<spec:wk-beads-wrappers>` and `<spec:wk-init>`; this spec only relies on `wk` being on `PATH`.
 - **Registry management commands.** `devtree registry lazy-register` and `devtree registry refresh` belong to the `devtree` CLI; this spec fixes only their contract.
 - **Scope semantics.** The `:scope` model and its translation into `bd` label arguments belong to the task-scopes spec; this spec only reserves the optional third target segment.
 - **`bd` itself** and its issue model, which `wkg`/`wkt` do not reimplement.
@@ -255,8 +257,8 @@ The chosen direction is a two-command routing layer (`wkg`/`wkt`) over a two-tie
 
 ### Option A — pure routing (chosen)
 
-```
-$ wkg work:cmdo-nix list --status=open
+```sh
+wkg work:cmdo-nix list --status=open
 # -> chdir <devtree>/cmdo-nix, exec wk list --status=open
 ```
 
@@ -265,8 +267,8 @@ $ wkg work:cmdo-nix list --status=open
 
 ### Option B — routing plus aggregate reporting
 
-```
-$ wkg all list --status=open       # every project, every devtree
+```sh
+wkg all list --status=open       # every project, every devtree
 ```
 
 - Advantages: one query spans projects, useful for a global work view.
@@ -274,7 +276,7 @@ $ wkg all list --status=open       # every project, every devtree
 
 ### Option C — live scan, no registry
 
-```
+```pseudocode
 # resolve a bare name by walking known devtrees on every run
 ```
 
@@ -289,12 +291,31 @@ $ wkg all list --status=open       # every project, every devtree
 
 ## Related artifacts
 
-- `SPEC-READY-wk-beads-wrappers/SPEC.md` — the `wk`/`wkg`/`wkt` task frontend this spec routes through; owns the `wk` wrapper, its packaging, and `wk init`.
-- `HANDOFF-20260920-beads-shared-server-devtree.md` — the `wk` wrapper's per-devtree shared Dolt server (one socket per devtree).
+- `<spec:wk-beads-wrappers>` — the `wk`/`wkg`/`wkt` task frontend this spec routes through; owns the `wk` wrapper and its packaging.
+- `<spec:wk-init>` — the project bootstrap that assigns each project's beads prefix.
+- `HANDOFF-20260920-beads-shared-server-devtree.md` — an earlier design note on running one Dolt server per devtree; the workspace placement it discussed is now owned by `<spec:beads-out-of-tree-storage>`.
 - `README.md` — the devtree definition, the human-first constraint, and the tooling inventory.
 - `docs/beads-refs/` — the `bd` data model, how-to, and tag vocabulary, including the `issue_prefix` and `external:<project>:<capability>` mechanics this spec leans on.
-- `SPEC-READY-devtree-daemons/SPEC.md` — the `<devtree>/.state/` convention and the one-server-per-devtree pattern.
+- `<spec:devtree-daemons>` — the `<devtree>/.state/` convention and its place in devtree state.
 - `EXPLO-*.md` in this directory — the pre-spec design record (resolver-core, registry, routing-vs-aggregate, bd-wrapper-interaction).
-- `SPEC-READY-task-scopes/SPEC.md` — the task-scopes spec: the `:scope` model and how the third target segment is translated into `bd` label arguments.
+- `<spec:task-scopes>` — the task-scopes spec: the `:scope` model and how the third target segment is translated into `bd` label arguments.
 
 ## Global Open Questions
+
+**Registry entries versus project info** — A registry entry records the project key and repository path, while the beads prefix lives in the project info.
+Whether the registry should also cache the prefix, or always re-read the project info at the destination, is open.
+Non-blocking.
+
+**Devtree name uniqueness** — Devtree names now come from `devtree.toml` in the config repo rather than a directory name.
+How a duplicate name is detected across the known-devtrees list, and by whom, is open.
+Non-blocking.
+
+**Cross-project dependency references** — `external:<project>:<capability>` is forwarded verbatim today, and `bd` stores it as an edge whose target has no row in the local database.
+Such an edge never blocks its issue: `bd ready` still lists it, and `bd dep tree` omits the edge.
+Three things are open: the grammar (project keys are unique per devtree only, so the ref currently has no devtree axis), whether anything ever resolves the target, and what a rename or workspace deletion does to stored refs.
+The candidate directions are to document the ref as an inert annotation and warn when an unresolved edge exists, to resolve it in `wk` against the target workspace, or to adopt `bd repo` hydration or `bd federation` — both of which change the one-workspace-per-project model owned by `<spec:beads-out-of-tree-storage>`.
+Blocking for any use that expects a cross-project dependency to actually hold a task back.
+Non-blocking for forwarding, which already works as specified.
+
+**Terminology & Key Concepts** (TKC) — Whether this section is needed for this spec.
+Non-blocking. Refer to spec-writing skill for guidance.

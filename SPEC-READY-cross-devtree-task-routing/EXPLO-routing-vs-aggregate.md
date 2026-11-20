@@ -5,6 +5,7 @@
 - Gas City's `gc bd --rig <name>` is explicitly "just routing sugar" (chdir + exec), with no cross-rig joining.
 - `bd` hard-scopes every query by `issue_prefix` and refuses cross-project reads, so any cross-project view must be built outside `bd`.
 - Cross-project *linking* is already native: `bd repo add` + `bd repo sync`, and `external:<project>:<capability>` dependency targets.
+  Correction: neither is native in this model. Verified against bd 1.3, `external:` targets are stored as edges with no row in the local database, so they never block; `bd repo` hydrates other workspaces into one database and conflicts with one workspace per project. Both are unresolved — see the *Cross-project dependency references* entry in `<spec:cross-devtree-task-routing>`.
 - One Dolt server per devtree (shared-server topology) means a per-devtree SQL join across prefixes is technically reachable, but it would couple the routing layer to that topology.
 
 ## Design crux
