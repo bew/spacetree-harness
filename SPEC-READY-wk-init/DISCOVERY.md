@@ -14,7 +14,7 @@ The pieces also disagree: the legacy tool force-tracks `.beads/` files in the re
 beads' auto-commit, while the out-of-tree spec settles on an external `BEADS_DIR` workspace with
 no tracked beads files and no commit to undo.
 
-For: a human running one command to make a project addressable in the devtree, and agents told to
+For: a human running one command to make a project addressable in the spacetree, and agents told to
 bootstrap a project without reading four specs to learn the order of steps.
 
 ## Inspirations
@@ -24,8 +24,8 @@ bootstrap a project without reading four specs to learn the order of steps.
 - `<spec:project-info>` — project info file, key grammar, ownership detection, the
   `wk init` ownership prompt.
 - `<spec:beads-out-of-tree-storage>` and `DISCOVERY.md` — external `BEADS_DIR`
-  workspace under `<devtree>/.state/beads-by-project/<key>/`, verified against bd 1.3.0.
-- `<spec:devtree-config-repo>` — the config repo holding the project info store.
+  workspace under `<spacetree>/.state/beads-by-project/<key>/`, verified against bd 1.3.0.
+- `<spec:spacetree-config-repo>` — the config repo holding the project info store.
 - `docs/beads-init-complaints.md` — why stock `bd init` is overridden at all.
 - `tooling/beads-devtree-init/beads-devtree-init` — the legacy wrapper whose behavior is being
   reimplemented and partly superseded.
@@ -41,8 +41,8 @@ Every current mention of `wk init` or `beads-devtree-init`:
 - `SPEC-DRAFT-project-info/DISCOVERY.md`: the tracked-vs-linked prompt.
 - `<spec:beads-out-of-tree-storage>`: scope line and an interface TODO.
 - `SPEC-DRAFT-beads-out-of-tree-storage/DISCOVERY.md`: `wk init` runs `bd init` with `BEADS_DIR`.
-- `<spec:cross-devtree-task-routing>`: delegates `wk init` ownership to the `wk` spec.
-- `SPEC-READY-cross-devtree-task-routing/EXPLO-resolver-core.md`: says `beads-devtree-init`
+- `<spec:cross-spacetree-task-routing>`: delegates `wk init` ownership to the `wk` spec.
+- `SPEC-READY-cross-spacetree-task-routing/EXPLO-resolver-core.md`: says `beads-devtree-init`
   assigns the issue prefix.
 - `README.md`: harness package list and the `repo-init` gap.
 - `docs/beads-init-complaints.md`: the whole doc is framed around `beads-devtree-init`.
@@ -75,12 +75,12 @@ Every current mention of `wk init` or `beads-devtree-init`:
 
 - The exact step order and failure/rollback behavior of a partially completed `wk init`.
 - Whether `wk init` is idempotent, resumable, or refuses once any of its outputs exist.
-- How `wk init` behaves without a devtree marker, without a config repo, or outside a git repo.
+- How `wk init` behaves without a spacetree marker, without a config repo, or outside a git repo.
 - Which steps stay interactive and which require flags in a non-interactive run.
 - Whether the tooling package rename happens in the same milestone as the Rust rewrite.
 
 ## Project-global docs
 
 Candidate set: `README.md`, `docs/beads-init-complaints.md`, `docs/beads-refs/`.
-Terms already defined there: devtree, `.devtree-root` marker, human-first constraint, stock
+Terms already defined there: spacetree, `.spacetree-root` marker, human-first constraint, stock
 `bd init` complaints. The spec references these rather than restating them.

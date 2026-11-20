@@ -5,18 +5,18 @@
 
 ## Introduction
 
-Every project in a devtree is an independent git repo, but its identity is implicit.
+Every project in a spacetree is an independent git repo, but its identity is implicit.
 It is either the directory name or the beads `issue_prefix`, and both change for reasons unrelated to the project: a directory rename, a re-cloned upstream, a prefix collision.
 A git worktree makes the point concrete: the same project routinely appears under several directories (`.worktrees/<branch>`, `feature-x/`), and none of those names is the project's name.
 Nothing at the project level says which external ticket system it belongs to, where its docs live, or which scheduler manages it.
 
 Two needs force the issue.
-Out-of-tree beads storage keys every workspace by project, and the cross-devtree routing layer addresses projects by name; both want a stable identifier that is not a filesystem accident.
+Out-of-tree beads storage keys every workspace by project, and the cross-spacetree routing layer addresses projects by name; both want a stable identifier that is not a filesystem accident.
 Project-level metadata (ticket system, docs system, external references) has no home at all today.
 
 This spec introduces a single small file at the project root, `project-info.toml`.
 Where the repo is ours to modify, the file is committed like any other config and reviewed as a diff.
-Where the repo is not ours (an open-source clone), a dot-prefixed `.project-info.toml` symlink points at the same TOML inside the devtree config repo, and git never sees it.
+Where the repo is not ours (an open-source clone), a dot-prefixed `.project-info.toml` symlink points at the same TOML inside the spacetree config repo, and git never sees it.
 
 The project info is human-first: ordinary TOML, readable and greppable, edited by hand, with no daemon, no database, and no generated cache behind it.
 Harness tooling reads it on demand and ignores sections it does not understand, so the file can carry project-specific extras without a schema change.
@@ -39,10 +39,10 @@ The stable project identifier declared by the project info; the name the routing
 The `issue_prefix` beads uses for issue IDs, such as `ghh-1a2b`; owned by the project info, but only beads consumes it.
 
 **project info store** (new!):
-The `project-infos/<key>.toml` directory inside the devtree config repo, defined by the devtree-config-repo spec.
+The `project-infos/<key>.toml` directory inside the spacetree config repo, defined by the spacetree-config-repo spec.
 
 **config repo** (existing):
-The per-devtree git repository the `.devtree-root` symlink points at; defined by the devtree-config-repo spec.
+The per-spacetree git repository the `.spacetree-root` symlink points at; defined by the spacetree-config-repo spec.
 
 ## Naming & IDs
 
@@ -53,8 +53,8 @@ Two filenames exist, and exactly one location: the project repo root.
 
 **Project key** grammar: `[A-Za-z0-9][A-Za-z0-9-]*`.
 It addresses the project, so it must survive renames of the directory, the repo, and the beads prefix.
-Case is preserved, but uniqueness within a devtree is enforced case-insensitively, because state directories may land on a case-insensitive filesystem.
-Uniqueness across devtrees is not required, because the routing grammar qualifies the key with the devtree.
+Case is preserved, but uniqueness within a spacetree is enforced case-insensitively, because state directories may land on a case-insensitive filesystem.
+Uniqueness across spacetrees is not required, because the routing grammar qualifies the key with the spacetree.
 
 **Beads prefix**: beads' own `issue_prefix` grammar, supplied by the project info and not interpreted by the harness.
 It is a separate identifier from the project key and may differ from it (`key = "greenhouse-hub"`, `prefix = "ghh"`).
@@ -117,7 +117,7 @@ $ wk init
   detected: not yours (gh: no push access)
   Is this repo yours?
   [m] me    — commit project-info.toml to this repo
-  [o] other — symlink .project-info.toml to the devtree config repo
+  [o] other — symlink .project-info.toml to the spacetree config repo
   owner [m/o]: o
 ```
 
@@ -168,8 +168,8 @@ ln -s ../project-info.toml .project-info.toml
 ## Resolution & Identity
 
 The project key is the addressing identity.
-Everything that names a project uses it: `wkg <devtree>:<key>:<scope>`, the project registry, `external:<key>:<cap>` references, and `<devtree>/.state/beads-by-project/<key>/`.
-`external:<key>:<cap>` follows the beads syntax and is currently inert: `bd` stores the edge without resolving it, and the grammar and resolution are open in `<spec:cross-devtree-task-routing>`.
+Everything that names a project uses it: `wkg <spacetree>:<key>:<scope>`, the project registry, `external:<key>:<cap>` references, and `<spacetree>/.state/beads-by-project/<key>/`.
+`external:<key>:<cap>` follows the beads syntax and is currently inert: `bd` stores the edge without resolving it, and the grammar and resolution are open in `<spec:cross-spacetree-task-routing>`.
 The beads prefix is an attribute, consumed only by beads, and renaming it never moves a workspace or changes an address.
 
 Identity never derives from the environment.
@@ -187,7 +187,7 @@ Resolution failures are distinct from validation failures, so callers can tell t
 
 A project info without a `[beads]` section is valid, but unaddressable by beads commands, which fail with `project has no beads prefix`.
 
-Uniqueness is enforced at creation, not at resolution: `wk init` consults the devtree registry and refuses a key already declared by a different repo path.
+Uniqueness is enforced at creation, not at resolution: `wk init` consults the spacetree registry and refuses a key already declared by a different repo path.
 There is no override flag; a repo that moved is not a case `wk init` handles.
 Resolution itself never scans, so the check costs nothing on the command path.
 
@@ -199,7 +199,7 @@ The repo root is the unit the routing layer addresses, so one file per repo keep
 The linked form is excluded through `.git/info/exclude`, never through the repo's own `.gitignore`.
 The distinction matters: `.git/info/exclude` is per-clone and untracked, so linking a project info cannot produce a diff in a repo someone else owns, while a `.gitignore` entry would.
 
-The project info store (`project-infos/<key>.toml`) lives in the devtree config repo, so linked project infos are versioned and reviewed there rather than in the repos they describe.
+The project info store (`project-infos/<key>.toml`) lives in the spacetree config repo, so linked project infos are versioned and reviewed there rather than in the repos they describe.
 The harness never writes to a tracked project info; `wk init` creates files, and every later edit is a human edit.
 
 In scope:
@@ -213,10 +213,10 @@ Out of scope:
 
 - The `wk init` command itself — its flags, prompts, and ordering belong to `<spec:wk-init>`.
 
-- The config repo itself and how its path is found (devtree-config-repo spec).
+- The config repo itself and how its path is found (spacetree-config-repo spec).
 - The beads workspace (beads out-of-tree storage spec).
-- Registry indexing and routing grammar (cross-devtree task routing spec).
-- Any other devtree-wide setting that might later land in `devtree.toml`.
+- Registry indexing and routing grammar (cross-spacetree task routing spec).
+- Any other spacetree-wide setting that might later land in `spacetree.toml`.
 
 ## Alternatives & Tradeoffs
 
@@ -227,17 +227,17 @@ It also breaks exactly where the design is needed: a worktree checkout (`feature
 
 The chosen design pays one small file per project to make identity explicit.
 Tracked project info keeps identity in the project's own history, where it is reviewed and survives a fresh clone.
-Linked project info covers the repos we do not own, without creating a diff, at the cost of depending on the devtree config repo being present.
+Linked project info covers the repos we do not own, without creating a diff, at the cost of depending on the spacetree config repo being present.
 
 **Always symlink into the config repo.**
 Uniform, and every project info is versioned in one place.
-Costs: repos we own no longer state their own identity, a clone outside the devtree has no identity at all, and the config repo becomes a single point of failure for every project.
+Costs: repos we own no longer state their own identity, a clone outside the spacetree has no identity at all, and the config repo becomes a single point of failure for every project.
 
 **Always tracked, never linked.**
 The most portable and the simplest rule to explain.
 Costs: it is impossible in a repo someone else owns, where even an untracked file would have to be excluded by hand, and it makes the harness unusable for open-source trees.
 
-**A devtree-wide registry keyed by path.**
+**A spacetree-wide registry keyed by path.**
 No file in any repo; one TOML maps repo paths to keys, ticket systems, and docs.
 Costs: paths go stale on every move and clone, the metadata is invisible from inside the project, and every worktree needs its own entry.
 
@@ -246,11 +246,11 @@ Prefer deriving nothing from the environment; a wrong key that silently shares o
 
 ## Related artifacts
 
-- `<spec:devtree-config-repo>` — where the config repo and the `project-infos/` store live.
+- `<spec:spacetree-config-repo>` — where the config repo and the `project-infos/` store live.
 - `<spec:wk-init>` — the bootstrap command that creates a project info and a beads workspace.
 - `<spec:beads-out-of-tree-storage>` — the workspace keyed by the project key.
-- `<spec:cross-devtree-task-routing>` — the registry and the `devtree:project:scope` grammar that consumes the key.
-- `README.md` — devtree definition and the project-metadata gap this spec fills.
+- `<spec:cross-spacetree-task-routing>` — the registry and the `spacetree:project:scope` grammar that consumes the key.
+- `README.md` — spacetree definition and the project-metadata gap this spec fills.
 - `bd where --json` — beads' own idea of a workspace identity, useful as prior art for what a project needs to answer.
 - `SPEC-DRAFT-project-info/DISCOVERY.md` — the discovery notes behind this design, including the cases that were rejected.
 
@@ -262,5 +262,5 @@ Non-blocking. Refer to spec-writing skill for guidance.
 **Secrets and environment values** — Whether a project info may reference credentials or environment-specific values (e.g. a JIRA token source).
 Non-blocking. The current core deliberately holds only identity and pointers, since secrets belong in a secret manager rather than a tracked TOML.
 
-**Registry timing** — When the devtree registry learns about a project: on `wk init`, on first resolution, or on a registry refresh.
+**Registry timing** — When the spacetree registry learns about a project: on `wk init`, on first resolution, or on a registry refresh.
 Non-blocking. The routing spec owns the registry; this spec only requires that duplicate keys be refused at creation.

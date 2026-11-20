@@ -7,9 +7,9 @@
   makeWrapper,
 }:
 
-# Ships the devtree Python script; its only runtime dependency is Python itself.
+# Ships the spacetree Python script; its only runtime dependency is Python itself.
 python3Packages.buildPythonApplication {
-  pname = "devtree";
+  pname = "spacetree";
   version = "0.1.0";
 
   # No pyproject.toml: a single script, installed by hand in installPhase.
@@ -22,7 +22,7 @@ python3Packages.buildPythonApplication {
 
   installPhase = ''
     runHook preInstall
-    install -Dm755 devtree $out/bin/devtree
+    install -Dm755 spacetree $out/bin/spacetree
     runHook postInstall
   '';
 
@@ -39,25 +39,25 @@ python3Packages.buildPythonApplication {
   # jq is optional at runtime — the script falls back to plain JSON without it —
   # but putting it on PATH is what gives terminal users jq's colored output.
   postFixup = ''
-    wrapProgram $out/bin/devtree --prefix PATH : ${lib.makeBinPath [ jq ]}
+    wrapProgram $out/bin/spacetree --prefix PATH : ${lib.makeBinPath [ jq ]}
   '';
 
   doCheck = true;
 
   preCheck = ''
     # Patch where the test file finds the binary to test
-    substituteInPlace ./devtree.bats \
-      --replace-fail 'SCRIPT_PATH="$SCRIPT_DIR/devtree"' SCRIPT_PATH="$out/bin/devtree"
+    substituteInPlace ./spacetree.bats \
+      --replace-fail 'SCRIPT_PATH="$SCRIPT_DIR/spacetree"' SCRIPT_PATH="$out/bin/spacetree"
   '';
   checkPhase = ''
     runHook preCheck
-    bats devtree.bats
+    bats spacetree.bats
     runHook postCheck
   '';
 
   meta = {
-    description = "Devtree CLI: resolve and inspect the enclosing devtree root";
-    mainProgram = "devtree";
+    description = "Spacetree CLI: resolve and inspect the enclosing spacetree root";
+    mainProgram = "spacetree";
     platforms = lib.platforms.unix;
   };
 }

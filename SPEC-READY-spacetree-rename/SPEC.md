@@ -135,10 +135,11 @@ Kept, with reasons:
 - Tree directory names (`~/self`, `~/work`) — the trees themselves are not being renamed, so nothing gains by renaming their directories.
 - beads issue prefix and issue identifiers — the prefix is data, not vocabulary, and no live database depends on it.
 - Dated `HANDOFF-*` notes — records of what was decided at a point in time; rewriting them falsifies the record.
-- the state branch `PROTECTED/beads-state-by-project` — carries no tree vocabulary.
+- the config repo's state branch, named `beads-devtree-init` — a branch name, not prose, and no beads setup exists to migrate it.
 
-Outside this repository, nothing consumes the vocabulary: no installed tool, shell profile, autoenv file, or home-manager module references `devtree` or the marker.
-The only artifacts out there are two empty `.devtree-root` files in `~/self` and `~/work`, hand-placed and read by nothing; they are renamed in the same pass because they record intent, not because a consumer needs the new name.
+Outside this repository, nothing executes the vocabulary: no installed tool, shell profile, autoenv file, or home-manager module references `devtree` or the marker.
+Documents elsewhere do name it, though: specs in the opencode dotfiles and in `wk-tools` refer to this repository and to its spec slugs by the old names, so they are swept in the same pass to keep those references resolving.
+The other artifacts out there are two marker files in `~/self` and `~/work`, read by nothing; they are renamed in the same pass and now point at each tree's config repo, because they record intent, not because a consumer needs the new name.
 
 The `wkg` axis label and the `$XDG_STATE_HOME/devtree-global/` directory exist only in specs describing future tooling, so they follow the prose that names them and no deployed path changes.
 
@@ -184,7 +185,7 @@ rg -n "devtree" --hidden --glob '!.git' .
 
 Every remaining hit must match an exemption:
 
-- `beads-devtree-init` — its name, its flake attribute, and the internals of that dead draft;
+- `beads-devtree-init` — its name, its flake attribute, the internals of that dead draft, and the config repo's state branch that borrows the name;
 - dated `HANDOFF-*` notes;
 - records of the rename itself: this spec's tables and alternatives, and the one line in the concept document stating the narrowing;
 - a sentence where `devtree` deliberately names the code-oriented case.
@@ -194,7 +195,7 @@ Any other hit is leftover.
 Grep gate outside it:
 
 ```sh
-rg -l "devtree" ~/.dot ~/work/.autoenv.zsh ~/self/.autoenv.zsh
+rg -l "devtree" ~/.dot ~/self/config-projects/dotfiles-alt ~/self/my-projects/wk-tools ~/work/.autoenv.zsh
 ```
 
 Expected empty, followed by `~/self/.spacetree-root` and `~/work/.spacetree-root` existing with no `.devtree-root` beside them.

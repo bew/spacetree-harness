@@ -2,16 +2,16 @@
 
 ## Motivation
 
-The cross-devtree task routing layer (`bdg`/`bdt`, see `<spec:cross-devtree-task-routing>`) is pure addressing: one target resolves to one project's beads workspace, and `bd` runs there unmodified.
+The cross-spacetree task routing layer (`bdg`/`bdt`, see `<spec:cross-spacetree-task-routing>`) is pure addressing: one target resolves to one project's beads workspace, and `bd` runs there unmodified.
 It has no way to express that a task belongs to a finer-grained grouping.
 
 A scope is a per-project classification on a task, where a task can sit in several scopes at once.
-Scopes are neither cross-devtree nor intra-devtree — they are a property of a project's own beads workspace, not an addressing axis projected onto the devtree.
+Scopes are neither cross-spacetree nor intra-spacetree — they are a property of a project's own beads workspace, not an addressing axis projected onto the spacetree.
 
 This exploration matures the scope design: what a scope is, how tasks enter and leave scopes, how scopes are queried, and what — if anything — the `bd` wrapper must do.
 
 In scope: the scope model and identity, membership/assignment, the query and addressing grammar, and any storage.
-Out of scope: devtree-level and cross-devtree routing semantics (settled in the routing spec); reimplementing `bd`; any aggregate or cross-project query path.
+Out of scope: spacetree-level and cross-spacetree routing semantics (settled in the routing spec); reimplementing `bd`; any aggregate or cross-project query path.
 
 ## Topics
 

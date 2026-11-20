@@ -1,4 +1,4 @@
-# Test suite for `devtree` script
+# Test suite for `spacetree` script
 #
 # % Uses BATS testing system
 # docs: https://bats-core.readthedocs.io/
@@ -9,39 +9,39 @@
 bats_require_minimum_version 1.5.0
 
 SCRIPT_DIR="$(dirname "$BATS_TEST_FILENAME")"
-SCRIPT_PATH="$SCRIPT_DIR/devtree"
+SCRIPT_PATH="$SCRIPT_DIR/spacetree"
 
-# Each test gets its own devtree root named `self` with the marker file
+# Each test gets its own spacetree root named `test-tree-root` with the marker file
 function setup() {
-    DEVROOT="$BATS_TEST_TMPDIR/self"
-    mkdir -p "$DEVROOT"
-    touch "$DEVROOT/.devtree-root"
+    TREE_ROOT="$BATS_TEST_TMPDIR/test-tree-root"
+    mkdir -p "$TREE_ROOT"
+    touch "$TREE_ROOT/.spacetree-root"
 }
 
 # ------------------------------------------------------------------------------
 # Tests: defaults
 
-@test "defaults: prints the devtree name and path as JSON" {
-    cd "$DEVROOT"
+@test "defaults: prints the spacetree name and path as JSON" {
+    cd "$TREE_ROOT"
 
     run -0 "$SCRIPT_PATH" root --json
 
-    [[ "$(jq -r '.name' <<< "$output")" == "self" ]]
+    [[ "$(jq -r '.name' <<< "$output")" == "test-tree-root" ]]
     [[ "$(jq -r '.path' <<< "$output")" == "$(pwd -P)" ]]
 }
 
 @test "defaults: resolves the root from a nested subdirectory" {
-    mkdir -p "$DEVROOT/group/repo"
-    cd "$DEVROOT/group/repo"
+    mkdir -p "$TREE_ROOT/group/repo"
+    cd "$TREE_ROOT/group/repo"
 
     run -0 "$SCRIPT_PATH" root --json
 
-    [[ "$(jq -r '.name' <<< "$output")" == "self" ]]
-    [[ "$(jq -r '.path' <<< "$output")" == "$(cd "$DEVROOT" && pwd -P)" ]]
+    [[ "$(jq -r '.name' <<< "$output")" == "test-tree-root" ]]
+    [[ "$(jq -r '.path' <<< "$output")" == "$(cd "$TREE_ROOT" && pwd -P)" ]]
 }
 
 @test "defaults: emits valid single-line JSON" {
-    cd "$DEVROOT"
+    cd "$TREE_ROOT"
 
     run -0 "$SCRIPT_PATH" root --json
 
@@ -62,29 +62,29 @@ function setup() {
 # Tests: error
 
 @test "error: root without --json fails" {
-    cd "$DEVROOT"
+    cd "$TREE_ROOT"
 
     run -1 --separate-stderr "$SCRIPT_PATH" root
 
     [[ "$stderr" == *"--json"* ]]
 }
 
-@test "error: fails when no devtree marker is found" {
-    rm -f "$DEVROOT/.devtree-root"
-    cd "$DEVROOT"
+@test "error: fails when no spacetree marker is found" {
+    rm -f "$TREE_ROOT/.spacetree-root"
+    cd "$TREE_ROOT"
 
     run -1 --separate-stderr "$SCRIPT_PATH" root --json
 
-    [[ "$stderr" == *".devtree-root"* ]]
+    [[ "$stderr" == *".spacetree-root"* ]]
 }
 
 # ------------------------------------------------------------------------------
 # Tests: edge
 
-@test "edge: prefers the nearest devtree when markers are nested" {
-    local inner="$DEVROOT/inner"
+@test "edge: prefers the nearest spacetree when markers are nested" {
+    local inner="$TREE_ROOT/inner"
     mkdir -p "$inner/sub"
-    touch "$inner/.devtree-root"
+    touch "$inner/.spacetree-root"
     cd "$inner/sub"
 
     run -0 "$SCRIPT_PATH" root --json

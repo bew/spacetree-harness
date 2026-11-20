@@ -1,11 +1,11 @@
-# [READY] wk — Personal devtree-aware work management frontend
+# [READY] wk — Personal spacetree-aware work management frontend
 
 ## Introduction
 
-This spec defines `wk`, the personal work frontend for the devtree harness.
-`wk` is the in-project form, `wkg` the cross-devtree form, and `wkt` the in-devtree form.
+This spec defines `wk`, the personal work frontend for the spacetree harness.
+`wk` is the in-project form, `wkg` the cross-spacetree form, and `wkt` the in-spacetree form.
 
-The trio renames the harness's in-project, cross-devtree, and in-devtree task commands to short work-named binaries.
+The trio renames the harness's in-project, cross-spacetree, and in-spacetree task commands to short work-named binaries.
 
 The premise is that users should type task commands, not database commands.
 Upstream beads `bd` is an implementation detail: it is not on `PATH` and is only ever reached through the trio.
@@ -14,7 +14,7 @@ Upstream beads `bd` is an implementation detail: it is not on `PATH` and is only
 
 This spec covers only what is specific to the frontend surface.
 
-Routing target grammar and the `wkg`/`wkt` delegation mechanism are owned by `<spec:cross-devtree-task-routing>`.
+Routing target grammar and the `wkg`/`wkt` delegation mechanism are owned by `<spec:cross-spacetree-task-routing>`.
 The `:scope` syntax and its translation table are owned by `<spec:task-scopes>`.
 Neither is re-specified here.
 
@@ -23,10 +23,10 @@ Neither is re-specified here.
 The frontend exposes three binaries:
 
 - `wk` — work. The in-project form.
-- `wkg` — work-global. The cross-devtree form.
-- `wkt` — work-devtree. The in-devtree form.
+- `wkg` — work-global. The cross-spacetree form.
+- `wkt` — work-spacetree. The in-spacetree form.
 
-The names map one-to-one onto the harness task commands they replace: `wk` to the in-project command, `wkg` to the cross-devtree command, and `wkt` to the in-devtree command.
+The names map one-to-one onto the harness task commands they replace: `wk` to the in-project command, `wkg` to the cross-spacetree command, and `wkt` to the in-spacetree command.
 There are no aliases and no back-compatibility shims: no scripts or habits depend on the old names.
 
 The `wk` wrapper is what `wk` runs.
@@ -39,10 +39,10 @@ The implementation directory is `wk-beads-wrappers/`.
 ## Interface / How to use
 
 Run `wk` from inside a project for in-project tasks.
-Run `wkt <target>` for tasks elsewhere in the same devtree.
-Run `wkg <target>` for tasks across devtrees.
+Run `wkt <target>` for tasks elsewhere in the same spacetree.
+Run `wkg <target>` for tasks across spacetrees.
 
-The `<target>` grammar and the `wkg`/`wkt` resolution-and-delegation mechanism are specified in `<spec:cross-devtree-task-routing>`.
+The `<target>` grammar and the `wkg`/`wkt` resolution-and-delegation mechanism are specified in `<spec:cross-spacetree-task-routing>`.
 The `:scope` segment and its translation are specified in `<spec:task-scopes>`.
 
 Both are referenced here, not restated.
@@ -51,8 +51,8 @@ Examples:
 
 - `wk ready` — list ready tasks in the current project.
 - `wk create --title="fix the thing" --type=bug` — create a task in the current project.
-- `wkt ghh list` — list tasks in project `ghh` in the current devtree.
-- `wkg self:ghh ready` — list ready tasks in project `ghh` of devtree `self`.
+- `wkt ghh list` — list tasks in project `ghh` in the current spacetree.
+- `wkg self:ghh ready` — list ready tasks in project `ghh` of spacetree `self`.
 - `wk :auth list` — list tasks in scope `auth`.
 - `wk init` — bootstrap the current project (see `<spec:wk-init>`).
 - `wk commit` — snapshot the current project's task state and push it.
@@ -72,7 +72,7 @@ The user only ever types `wk`, `wkg`, or `wkt`.
 The binaries are built from the Rust source in `wk-beads-wrappers/` and wired into `flake.nix`, alongside the bundled `bd`.
 `wkg` and `wkt` resolve their target, change directory, and exec `wk` — a sibling binary from the same closure — forwarding the remaining arguments.
 
-Exec'ing `wk` from the resolved directory is what lets it read the target project's project info and derive that project's workspace, so the same wrapper serves either devtree.
+Exec'ing `wk` from the resolved directory is what lets it read the target project's project info and derive that project's workspace, so the same wrapper serves either spacetree.
 
 ## `wk init`
 
@@ -87,8 +87,8 @@ The Rust rewrite replaces the tool before either reached a project; the supersed
 
 ## `wk commit` / `wkg commit`
 
-`wk commit` snapshots the current project's task state onto the devtree's state branch and pushes it.
-`wkg commit` does the same for a project in another devtree, resolved by the routing target grammar.
+`wk commit` snapshots the current project's task state onto the spacetree's state branch and pushes it.
+`wkg commit` does the same for a project in another spacetree, resolved by the routing target grammar.
 
 What is committed, when a push is refused, and the branch-protection check are owned by `<spec:beads-out-of-tree-storage>`.
 This spec owns the verb names and their place in the trio, not the snapshot semantics.
@@ -102,12 +102,12 @@ Non-blocking. Deferred; the manual verb is the whole surface for now.
 
 Linking this frontend into the existing specs required the following edits, now applied:
 
-- `<spec:cross-devtree-task-routing>`: renamed the user-facing entry points `bdg`/`bdt` to `wkg`/`wkt`, replaced the "exec `bd` from `PATH`" clause with exec'ing `wk`, addressed projects by their project key, and pointed its out-of-scope `bd`-wrapper item at this spec.
+- `<spec:cross-spacetree-task-routing>`: renamed the user-facing entry points `bdg`/`bdt` to `wkg`/`wkt`, replaced the "exec `bd` from `PATH`" clause with exec'ing `wk`, addressed projects by their project key, and pointed its out-of-scope `bd`-wrapper item at this spec.
 - `<spec:task-scopes>`: answered Global Open Question #1 as yes — the frontend supersedes the `:scope` wrapper syntax at the surface — and replaced the "a separate `wk` binary is out of scope" note, which was stale.
-- `<spec:devtree-daemons>`: the `.devtree-root` marker is now a symlink to the config repo, and `.state/beads-by-project/` is the one versioned exception under `.state/`.
+- `<spec:spacetree-daemons>`: the `.spacetree-root` marker is now a symlink to the config repo, and `.state/beads-by-project/` is the one versioned exception under `.state/`.
 - `<spec:beads-out-of-tree-storage>`: workspaces live outside the repo on the config repo's state branch; this frontend no longer attaches a shared Dolt server, it sets `BEADS_DIR`.
 - `<spec:project-info>`: the file the wrapper reads for the project key and beads prefix.
-- `<spec:devtree-config-repo>`: the marker symlink, config repo, and state branch the wrapper resolves through.
+- `<spec:spacetree-config-repo>`: the marker symlink, config repo, and state branch the wrapper resolves through.
 - `<spec:wk-init>`: extracted the `wk init` workflow; this spec keeps only the verb and its packaging.
 
 The routing, scope, and storage semantics themselves are unchanged.
@@ -126,7 +126,7 @@ In scope:
 
 Out of scope:
 
-- Routing target grammar and the `wkg`/`wkt` resolution-and-delegation mechanism — owned by `<spec:cross-devtree-task-routing>`.
+- Routing target grammar and the `wkg`/`wkt` resolution-and-delegation mechanism — owned by `<spec:cross-spacetree-task-routing>`.
 - `:scope` syntax and its translation table — owned by `<spec:task-scopes>`.
 - The `wk init` workflow — owned by `<spec:wk-init>`.
 - Workspace placement, the state branch, and commit semantics — owned by `<spec:beads-out-of-tree-storage>`.
@@ -141,7 +141,7 @@ Rejected.
 
 **Use stock `bd init`, no custom `init`.**
 This defers initialization to beads' default.
-`bd init` is not good enough by default: its defaults do not suit the harness, and it does not follow devtree conventions.
+`bd init` is not good enough by default: its defaults do not suit the harness, and it does not follow spacetree conventions.
 That is exactly why `wk init` overrides it (see `<spec:wk-init>`).
 Rejected.
 
@@ -167,12 +167,12 @@ Rejected in favor of `wk`/`wkg`/`wkt`.
 
 ## Related artifacts
 
-- `<spec:cross-devtree-task-routing>` — target grammar and `wkg`/`wkt` delegation.
+- `<spec:cross-spacetree-task-routing>` — target grammar and `wkg`/`wkt` delegation.
 - `<spec:task-scopes>` — `:scope` syntax and translation.
 - `<spec:wk-init>` — the `wk init` workflow this spec only intercepts.
 - `<spec:beads-out-of-tree-storage>` — the external workspace `wk` points `bd` at, and the commit semantics `wk commit` exposes.
 - `<spec:project-info>` — the project info the wrapper resolves on every invocation.
-- `<spec:devtree-config-repo>` — the marker symlink and config repo behind devtree resolution.
+- `<spec:spacetree-config-repo>` — the marker symlink and config repo behind spacetree resolution.
 - `SPEC-DRAFT-wk-beads-wrappers/EXPLO-frontend-cli.md` — the exploration that settled this design.
 - `docs/beads-refs/` — the upstream beads reference.
 - `README.md` — the harness overview and tooling conventions.

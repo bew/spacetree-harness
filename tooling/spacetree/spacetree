@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Resolve the enclosing devtree root and print it as JSON.
+# Resolve the enclosing spacetree root and print it as JSON.
 
 import argparse
 import json
@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-MARKER_FILENAME = ".devtree-root"
+MARKER_FILENAME = ".spacetree-root"
 
 
 class ScriptError(Exception):
@@ -22,12 +22,12 @@ def print_err(msg: str) -> None:
 
 def usage_and_exit(status: int) -> None:
     """Print usage to stderr and exit with status."""
-    print_err("Usage: devtree root --json")
+    print_err("Usage: spacetree root --json")
     sys.exit(status)
 
 
-def find_devtree_root(start: Path) -> Path:
-    """Return the nearest ancestor of start (inclusive) holding the devtree marker."""
+def find_spacetree_root(start: Path) -> Path:
+    """Return the nearest ancestor of start (inclusive) holding the spacetree marker."""
     current = start
     while True:
         if (current / MARKER_FILENAME).exists():
@@ -35,7 +35,7 @@ def find_devtree_root(start: Path) -> Path:
         parent = current.parent
         if parent == current:
             raise ScriptError(
-                f"no {MARKER_FILENAME} found above {start}; create one at the devtree root"
+                f"no {MARKER_FILENAME} found above {start}; create one at the spacetree root"
             )
         current = parent
 
@@ -43,11 +43,11 @@ def find_devtree_root(start: Path) -> Path:
 def parse_args() -> argparse.Namespace:
     """Parse the subcommand and its flags."""
     parser = argparse.ArgumentParser(
-        prog="devtree",
-        description="Work with the enclosing devtree.",
+        prog="spacetree",
+        description="Work with the enclosing spacetree.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
-    root_cmd = sub.add_parser("root", help="print the enclosing devtree root")
+    root_cmd = sub.add_parser("root", help="print the enclosing spacetree root")
     root_cmd.add_argument(
         "--json",
         action="store_true",
@@ -77,10 +77,10 @@ def print_pretty_with_jq(compact_json: str) -> bool:
 
 
 def cmd_root(args: argparse.Namespace) -> None:
-    """Print the enclosing devtree root as JSON with its name and path."""
+    """Print the enclosing spacetree root as JSON with its name and path."""
     if not args.json:
         raise ScriptError("root requires --json")
-    root = find_devtree_root(Path.cwd())
+    root = find_spacetree_root(Path.cwd())
     print_json({"name": root.name, "path": str(root)})
 
 

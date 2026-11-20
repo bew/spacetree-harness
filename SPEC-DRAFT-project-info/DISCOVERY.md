@@ -6,7 +6,7 @@ Project identity and project-level metadata have no machine-readable home.
 Each project's identity is guessed from its directory name, and beads uses `issue_prefix` as the project identity.
 Projects that are not ours to modify (open-source clones) still need tracking, so the metadata cannot always live in the repo.
 
-For: the task-routing layer (project addressing), the devtree registry, and external references (`external:<project>:<cap>`).
+For: the task-routing layer (project addressing), the spacetree registry, and external references (`external:<project>:<cap>`).
 
 ## Inspirations
 
@@ -22,7 +22,7 @@ For: the task-routing layer (project addressing), the devtree registry, and exte
   Sharing a parent's identity is an explicit `.project-info.toml` link, not an upward search.
 - In repos we do not control, link the project info instead of tracking it.
 - The link is dot-prefixed, so it never collides with a tracked `project-info.toml`.
-- The project info store belongs to the devtree config repo, not the devtree root.
+- The project info store belongs to the spacetree config repo, not the spacetree root.
 
 ## Settled decisions
 

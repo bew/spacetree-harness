@@ -4,7 +4,7 @@ What a scope is, what identifies it, and how a task's membership in one or more 
 
 ## Findings
 
-- A scope is per-project: it is a property of one project's beads workspace, not a devtree-level or cross-devtree axis.
+- A scope is per-project: it is a property of one project's beads workspace, not a spacetree-level or cross-spacetree axis.
 - A task can be in multiple scopes at once (many-to-many).
 - The user's shorthand: "a label on the task I want to ask about".
 - `bd` already has free-form labels (`bd label`, `bd tag`), a `metadata` key=value bag, and hierarchy via `parent`/`epic` — any of which could carry scope membership.
@@ -17,7 +17,7 @@ What a scope is, what identifies it, and how a task's membership in one or more 
 ## Design crux
 
 Representation is settled: a scope is a `bd` label under a reserved `scope:` namespace, flat, free-form, with no declared vocabulary.
-Where the syntax lives is settled — the wrapper layer (`bdg`/`bdt`/`bd`) behind a shared implementation (see `EXPLO-scope-translation.md`); the open question there is how `:scope` composes with project and devtree addressing.
+Where the syntax lives is settled — the wrapper layer (`bdg`/`bdt`/`bd`) behind a shared implementation (see `EXPLO-scope-translation.md`); the open question there is how `:scope` composes with project and spacetree addressing.
 
 ## Candidate directions
 
@@ -40,7 +40,7 @@ Where the syntax lives is settled — the wrapper layer (`bdg`/`bdt`/`bd`) behin
 ## Open threads
 
 - (answered) Scope syntax lives in the wrapper layer (`bdg`/`bdt`/`bd`) behind a shared implementation, not a separate `wk` binary; see `EXPLO-scope-translation.md`.
-- Composition grammar: `wk :scope ready` vs `wk project:scope ready` vs `wk devtree:project:scope ready` — how are the segments disambiguated?
+- Composition grammar: `wk :scope ready` vs `wk project:scope ready` vs `wk spacetree:project:scope ready` — how are the segments disambiguated?
 - With no declared list, what does the "hint" on first use of a scope actually say?
 - Is the label literally `scope:<name>`; how does it avoid noise in `bd label list-all`?
 - Does the frontend offer an ephemeral active scope, given nothing is persisted?

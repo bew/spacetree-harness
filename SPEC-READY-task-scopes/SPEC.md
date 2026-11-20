@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The cross-devtree task routing layer (`wkg`/`wkt`, see `<spec:cross-devtree-task-routing>`) addresses projects.
+The cross-spacetree task routing layer (`wkg`/`wkt`, see `<spec:cross-spacetree-task-routing>`) addresses projects.
 One target resolves to exactly one project, and `wk` runs there unmodified.
 
 That is the right granularity for reaching a project, but not for working inside one: a project holds many tasks, and the routing layer has no way to express a finer grouping of them.
@@ -10,7 +10,7 @@ That is the right granularity for reaching a project, but not for working inside
 A scope is that finer grouping.
 It is a per-project classification on a task, where a task can sit in several scopes at once.
 
-Scopes are neither cross-devtree nor intra-devtree — they belong to a project, not to the devtree addressing axis.
+Scopes are neither cross-spacetree nor intra-spacetree — they belong to a project, not to the spacetree addressing axis.
 They are flat and free-form: there is no declared vocabulary, and no membership is exclusive.
 
 A scope is carried as an ordinary `bd` label under a reserved `scope:` namespace (`scope:auth`), and selected on the command line with a `:scope` segment (`wkg self:ghh:auth list`).
@@ -92,7 +92,7 @@ scope-list    := scope-name ("," scope-name)*
 ```
 wk   [:scope-list] <subcmd> [args…]      # direct — a leading segment before the subcmd
 wkg <target>[:scope-list] [args…]       # routed — appended to the target
-wkt <project>[:scope-list] [args…]      # in-devtree — appended to the project
+wkt <project>[:scope-list] [args…]      # in-spacetree — appended to the project
 ```
 
 ```
@@ -103,7 +103,7 @@ wkg self:ghh:auth,ui ready
 ```
 
 The segment is the last part of the target and adds no addressing axis (see *Segment resolution*).
-An empty project segment targets the devtree root's own workspace — `wkg work::auth`, `wkt :auth`.
+An empty project segment targets the spacetree root's own workspace — `wkg work::auth`, `wkt :auth`.
 
 The direct-`wk` form is wrapper syntax: stock `bd` takes no leading `:scope`, so the `wk` wrapper strips it before exec (see *Translation rules*).
 A leading `:` token is always a scope; there is no escape, so a literal argument beginning with `:` cannot be forwarded in that position.
@@ -188,35 +188,35 @@ A subcmd outside the table is treated as label-less: the scope is ignored with a
 ## Segment resolution
 
 A `wkg`/`wkt` target is a `:`-separated sequence of segments.
-Resolution keeps the routing spec's rules for the devtree and project axes, and layers the scope segment on top as the last segment.
+Resolution keeps the routing spec's rules for the spacetree and project axes, and layers the scope segment on top as the last segment.
 
 ### Two axes plus a scope
 
 The scope segment is optional and always last; everything before it is the routing address, resolved by the routing spec unchanged.
 
 ```
-<devtree>:<project>:<scope-list>     # wkg
-       <project>:<scope-list>        # wkt — devtree from cwd
+<spacetree>:<project>:<scope-list>     # wkg
+       <project>:<scope-list>        # wkt — spacetree from cwd
 ```
 
-`wkt` has no devtree segment, so its leading segment is always a project and its scope is never confused with a devtree.
+`wkt` has no spacetree segment, so its leading segment is always a project and its scope is never confused with a spacetree.
 
-### Devtree names win
+### Spacetree names win
 
-For `wkg`, a two-segment target is ambiguous between `<devtree>:<project>` and `<project>:<scope-list>`.
-The routing spec's existing rule decides it: a bare name matching a known devtree is that devtree.
+For `wkg`, a two-segment target is ambiguous between `<spacetree>:<project>` and `<project>:<scope-list>`.
+The routing spec's existing rule decides it: a bare name matching a known spacetree is that spacetree.
 
-So `wkg work:auth` is devtree `work` + project `auth` whenever `work` is a known devtree, never project `work` + scope `auth`.
-When the first segment is not a devtree name, the pair reads as `<project>:<scope-list>`, so `wkg ghh:auth` is project `ghh` + scope `auth`.
-The three-segment form `<devtree>:<project>:<scope-list>` is unambiguous.
+So `wkg work:auth` is spacetree `work` + project `auth` whenever `work` is a known spacetree, never project `work` + scope `auth`.
+When the first segment is not a spacetree name, the pair reads as `<project>:<scope-list>`, so `wkg ghh:auth` is project `ghh` + scope `auth`.
+The three-segment form `<spacetree>:<project>:<scope-list>` is unambiguous.
 
-### The devtree root's own workspace
+### The spacetree root's own workspace
 
-The devtree root carries its own `bd` workspace, reachable by its bare devtree name (`wkg work`).
-That name occupies the devtree segment, so `wkg work:auth` always means devtree `work` + project `auth`, never the root's own workspace with a scope.
+The spacetree root carries its own `bd` workspace, reachable by its bare spacetree name (`wkg work`).
+That name occupies the spacetree segment, so `wkg work:auth` always means spacetree `work` + project `auth`, never the root's own workspace with a scope.
 
-An empty project segment targets the root itself: `wkg work::auth` is devtree `work`'s own workspace plus scope `auth`.
-In `wkt`, which has no devtree segment, the same form is a leading empty project segment: `wkt :auth`.
+An empty project segment targets the root itself: `wkg work::auth` is spacetree `work`'s own workspace plus scope `auth`.
+In `wkt`, which has no spacetree segment, the same form is a leading empty project segment: `wkt :auth`.
 
 ## Placement / Scope
 
@@ -287,12 +287,12 @@ $ wkg self:ghh --scope auth list
 
 ## Related artifacts
 
-- `<spec:cross-devtree-task-routing>` — the routing layer this builds on; defines `wkg`/`wkt` and reserves the `:scope` target segment.
+- `<spec:cross-spacetree-task-routing>` — the routing layer this builds on; defines `wkg`/`wkt` and reserves the `:scope` target segment.
 - `EXPLO-scope-model.md`, `EXPLO-scope-translation.md` in this directory — the pre-spec design record for the scope model and the rewrite.
 - `docs/beads-refs/` — the `bd` data model and how-to, including labels and the per-subcmd label flags the rewrite targets.
 - `HANDOFF-20260920-beads-shared-server-devtree.md` — the `wk` wrapper this spec's rewrite rides in.
 - `<spec:wk-beads-wrappers>` — the `wk`/`wkg`/`wkt` frontend; its `wk` wrapper is where this spec's rewrite lives.
-- `README.md` — the devtree definition and the human-first constraint this design follows.
+- `README.md` — the spacetree definition and the human-first constraint this design follows.
 
 ## Global Open Questions
 

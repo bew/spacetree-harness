@@ -1,15 +1,15 @@
 # Beads `bd init` — Complaints & Desired Behavior
 
-This document records what the stock `bd init` does wrong in this devtree, and what `wk init` must do instead.
+This document records what the stock `bd init` does wrong in this spacetree, and what `wk init` must do instead.
 `wk init` is the project bootstrap specified in [`SPEC-READY-wk-init`](../SPEC-READY-wk-init/SPEC.md); its beads step is a narrow wrapper around `bd init`.
 Status: draft — complaints captured; the command design is settled in that spec, while the beads text added to `AGENTS.md` is not.
 
 ## Context
 
-Observed on `bd` 1.0.3 (dev), run once in `devtree-harness`.
+Observed on `bd` 1.0.3 (dev), run once in `spacetree-harness`.
 The harness is human-first: every capability must work manually, and agent support is a layer on top (see README).
 Agents here are not fully autonomous: they run task-scoped, and never commit or push unless a dedicated agent is configured for it.
-`bd init` instead assumes a Claude Code surface and an autonomous, always-pushing workflow, which does not match this devtree.
+`bd init` instead assumes a Claude Code surface and an autonomous, always-pushing workflow, which does not match this spacetree.
 
 ## Complaints
 

@@ -17,7 +17,7 @@ How a `:scope` selector typed on the command line is turned into the right `bd` 
 ## Design crux
 
 The trigger is explicit per-invocation: a `:scope` token typed on the command line, nothing persisted.
-The host and token shape are settled; the open questions are how a scope segment is told apart from the existing devtree/project `:` addressing, and the per-verb semantics.
+The host and token shape are settled; the open questions are how a scope segment is told apart from the existing spacetree/project `:` addressing, and the per-verb semantics.
 
 ## Decisions
 
@@ -25,12 +25,12 @@ The host and token shape are settled; the open questions are how a scope segment
 - (settled) The translation lives in the wrapper layer (`bdg`/`bdt`/`bd`) behind a shared implementation, not in a separate `wk` binary.
 - (settled) All three rewrite: `bdg`, `bdt`, and the `bd` wrapper each invoke the shared rewrite. NOTE — rewriting inside `bdg`/`bdt` contradicts the routing spec's pure-routing clause ("`bd` runs unmodified … no query interception"); that spec needs an amendment or an explicit exception.
 - (settled) Grammar — `bd` (direct): a leading `:scope` token in the forwarded args, e.g. `bd :auth list`. `bdg`/`bdt`: a positional segment on the target, e.g. `bdg self:ghh:auth list`, `bdt ghh:auth list`.
-- (settled) Two-segment `bdg` target: devtree names win. `ghh:auth` means devtree `ghh` + project `auth` when `ghh` is a known devtree, else project `ghh` + scope `auth`. (`bdt ghh:auth` is unambiguously project `ghh` + scope `auth` — `bdt` has no devtree segment.)
+- (settled) Two-segment `bdg` target: spacetree names win. `ghh:auth` means spacetree `ghh` + project `auth` when `ghh` is a known spacetree, else project `ghh` + scope `auth`. (`bdt ghh:auth` is unambiguously project `ghh` + scope `auth` — `bdt` has no spacetree segment.)
 - (settled) Multiple scopes combine with AND; comma-separated: `bdg self:ghh:auth,ui`, `bdt ghh:auth,ui`. Filters map to repeated `--label scope:X`.
 - (settled) Writes assign membership: `create` → `--labels scope:X`; `update` → `--add-label scope:X`.
 - (settled) Verbs with no label param (`close`, `show`, `dep`, …): the scope is ignored with a warning (not an error).
 - (settled) `bd query` is supported: `bd :auth query "…"` injects `label=scope:X AND …` into the query string.
-- (settled) The routing spec (`<spec:cross-devtree-task-routing>`) is amended now to permit the scope rewrite in `bdg`/`bdt`.
+- (settled) The routing spec (`<spec:cross-spacetree-task-routing>`) is amended now to permit the scope rewrite in `bdg`/`bdt`.
 
 ## Candidate directions
 
@@ -38,12 +38,12 @@ The host and token shape are settled; the open questions are how a scope segment
 - (rejected) **Host = bd wrapper only**, leaving `bdg`/`bdt` as pure routers.
 - (rejected) **Dedicated `--scope` flag.**
 - (settled) **Token shape = leading `:name` for direct `bd`, positional segment for `bdg`/`bdt`.**
-- (settled) **Disambiguation — devtree names win.**
+- (settled) **Disambiguation — spacetree names win.**
 - (settled) **Multi-scope = AND, comma-separated.**
 
 ## Open threads
 
 - For direct `bd`, where exactly does the leading `:scope` token sit (first positional, before the verb), and how is it escaped if a literal arg starts with `:`?
-- Edge: `bdg work:auth` where `work` is a devtree resolves to devtree `work` + project `auth`, so the devtree root's own scope is not addressable in the two-segment form.
+- Edge: `bdg work:auth` where `work` is a spacetree resolves to spacetree `work` + project `auth`, so the spacetree root's own scope is not addressable in the two-segment form.
 - Warning channel and wording for ignored scopes (stderr, exit status unchanged).
 - `show` cannot filter server-side, so scope silently no-ops there — confirm acceptable.
