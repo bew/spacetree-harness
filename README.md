@@ -34,6 +34,8 @@ This repo aims to contain:
 
 Each exposed on flake `packages.<system>.*`.
 
+- `wk` (planned): the task frontend (`wk`/`wkg`/`wkt`), whose `wk init` bootstraps a project's project info and beads workspace.
+  (to understand why, read [my `bd init` complaints](./docs/beads-init-complaints.md))
 - `devtree`: CLI over the devtree itself.
   For now only `devtree root --json`, which resolves the enclosing devtree root by walking up for the `.devtree-root` marker and prints `{name, path}`.
 
@@ -74,7 +76,7 @@ Observed on work MacOS system, across `~/work` and `~/self`.
 - Repos stay independent (each its own git, `.envrc`, and flake where relevant), and the devtree root is not itself a repo.
 
 Observed structure (sample):
-```text
+```
 ~/self
 ├── brain_work/            # repo using PARA + Johnny-Decimal notes (git)
 ├── brain-tech-resources/  # flat markdown KB (git)
@@ -102,7 +104,7 @@ Observed structure (sample):
 - `~/work/.autoenv.zsh` activates the devtree: adds shared `scripts/` to `PATH`, defines env/profile helpers (`prd-admin`, `stg-admin`, `sso`, `rmtf`), aliases.
 
 Observed structure (sample):
-```text
+```
 ~/work
 ├── .autoenv.zsh           # devtree activation
 ├── ucNN-projectname-stuff/ # use-case group: repos + loose artifacts
@@ -139,4 +141,4 @@ Observed structure (sample):
   This needs its own whole project design.
 - Devtree-defined skills and tools for AI agents.
 - Cross-repo discovery and indexing for navigation and search.
-- A generic `repo-init` devtree wrapper that sequences per-concern init steps, one of which is `beads-devtree-init` (a thin wrapper over `bd init`).
+- A generic `repo-init` devtree wrapper that sequences per-concern init steps; `devtree init` and `wk init` now cover most of it.
