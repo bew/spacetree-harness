@@ -104,10 +104,10 @@ Linking this frontend into the existing specs required the following edits, now 
 
 - `<spec:cross-spacetree-task-routing>`: renamed the user-facing entry points `bdg`/`bdt` to `wkg`/`wkt`, replaced the "exec `bd` from `PATH`" clause with exec'ing `wk`, addressed projects by their project key, and pointed its out-of-scope `bd`-wrapper item at this spec.
 - `<spec:task-scopes>`: answered Global Open Question #1 as yes — the frontend supersedes the `:scope` wrapper syntax at the surface — and replaced the "a separate `wk` binary is out of scope" note, which was stale.
-- `<spec:spacetree-daemons>`: the `.spacetree-root` marker is now a symlink to the config repo, and `.state/beads-by-project/` is the one versioned exception under `.state/`.
-- `<spec:beads-out-of-tree-storage>`: workspaces live outside the repo on the config repo's state branch; this frontend no longer attaches a shared Dolt server, it sets `BEADS_DIR`.
+- `<spec:spacetree-daemons>`: the `.spacetree-repo` marker is now a symlink to the spacetree repo, and the versioned task-state checkout is at `.spacetree/shared-state/`, with beads workspaces under its `beads-by-project/`.
+- `<spec:beads-out-of-tree-storage>`: workspaces live outside the repo on the spacetree repo's state branch; this frontend no longer attaches a shared Dolt server, it sets `BEADS_DIR`.
 - `<spec:project-info>`: the file the wrapper reads for the project key and beads prefix.
-- `<spec:spacetree-config-repo>`: the marker symlink, config repo, and state branch the wrapper resolves through.
+- `<spec:spacetree-repo>`: the marker symlink, spacetree repo, and state branch the wrapper resolves through.
 - `<spec:wk-init>`: extracted the `wk init` workflow; this spec keeps only the verb and its packaging.
 
 The routing, scope, and storage semantics themselves are unchanged.
@@ -172,7 +172,7 @@ Rejected in favor of `wk`/`wkg`/`wkt`.
 - `<spec:wk-init>` — the `wk init` workflow this spec only intercepts.
 - `<spec:beads-out-of-tree-storage>` — the external workspace `wk` points `bd` at, and the commit semantics `wk commit` exposes.
 - `<spec:project-info>` — the project info the wrapper resolves on every invocation.
-- `<spec:spacetree-config-repo>` — the marker symlink and config repo behind spacetree resolution.
+- `<spec:spacetree-repo>` — the marker symlink and spacetree repo behind spacetree resolution.
 - `SPEC-DRAFT-wk-beads-wrappers/EXPLO-frontend-cli.md` — the exploration that settled this design.
 - `docs/beads-refs/` — the upstream beads reference.
 - `README.md` — the harness overview and tooling conventions.

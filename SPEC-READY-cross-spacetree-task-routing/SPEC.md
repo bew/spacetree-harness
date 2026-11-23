@@ -48,10 +48,10 @@ The logic that maps a target to exactly one beads workspace, or rejects it as am
 Tooling that resolves the enclosing spacetree and follows harness conventions, such as calling `spacetree registry lazy-register` on interaction.
 
 **spacetree root** (new!):
-The directory carrying the `.spacetree-root` marker, a symlink whose target is the spacetree config repo; the enclosing spacetree is found by walking up to it (see `<spec:spacetree-config-repo>`).
+The directory carrying the `.spacetree-repo` marker, a symlink whose target is the spacetree repo; the enclosing spacetree is found by walking up to it (see `<spec:spacetree-repo>`).
 
 **spacetree project registry** (new!):
-A spacetree's own lazy index of its projects, stored under `<spacetree>/.state/`.
+A spacetree's own lazy index of its projects, stored under `<spacetree root>/.spacetree/machine-state/`.
 A project appears once spacetree-aware tooling has interacted with it inside that spacetree, and is identified by its project key.
 
 **known-spacetrees list** (new!):
@@ -155,7 +155,7 @@ Exec'ing `wk` from `PATH` is deliberate: it lets the target project's `wk` wrapp
 ## Resolution rules
 
 Resolution depends on two inputs: the target form, and whether the current directory is inside a spacetree.
-The enclosing spacetree is found by walking up for the `.spacetree-root` marker.
+The enclosing spacetree is found by walking up for the `.spacetree-repo` marker.
 
 ### Spacetree names are global; project names are scoped
 
@@ -202,7 +202,7 @@ This spec defines the contract `wkg`/`wkt` rely on; the registry's own commands 
 
 ### Spacetree project registry
 
-Each spacetree keeps its own index of its projects under `<spacetree>/.state/`.
+Each spacetree keeps its own index of its projects under `<spacetree root>/.spacetree/machine-state/`.
 A project enters the index once spacetree-aware tooling interacts with it inside that spacetree; its identity is its project key, and the entry records the project key and repository path.
 
 The index is lazy-only: no scan, no TTL, and a project never interacted with stays absent.
@@ -233,9 +233,9 @@ A spacetree project registry only changes through interaction or an explicit `re
 
 ### State placement
 
-- Spacetree project registries live under `<spacetree>/.state/`, alongside other spacetree state (see `<spec:spacetree-daemons>`); they are never committed to a project repo.
+- Spacetree project registries live under `<spacetree root>/.spacetree/machine-state/`, the state root holding what is true of this machine alone (see `<spec:spacetree-repo>`); they are never committed to a project repo.
 - The known-spacetrees list lives under `$XDG_STATE_HOME/spacetree-global/`.
-- `wkg`/`wkt` write no state inside a project repo; a project carries only its project info file (tracked, or a linked symlink), and its beads workspace lives under the spacetree's `.state/` (see `<spec:beads-out-of-tree-storage>`).
+- `wkg`/`wkt` write no state inside a project repo; a project carries only its project info file (tracked, or a linked symlink), and its beads workspace lives under the spacetree's `.spacetree/shared-state/` (see `<spec:beads-out-of-tree-storage>`).
 
 ### In scope
 
@@ -259,7 +259,7 @@ The chosen direction is a two-command routing layer (`wkg`/`wkt`) over a two-tie
 
 ```sh
 wkg work:cmdo-nix list --status=open
-# -> chdir <spacetree>/cmdo-nix, exec wk list --status=open
+# -> chdir <spacetree root>/cmdo-nix, exec wk list --status=open
 ```
 
 - Advantages: minimal surface; `bd` stays the single source of truth; arguments, output, and exit status pass through untouched, bar the `:scope` rewrite; matches Gas City's `gc bd --rig` ceiling.
@@ -296,7 +296,7 @@ wkg all list --status=open       # every project, every spacetree
 - `HANDOFF-20260920-beads-shared-server-devtree.md` — an earlier design note on running one Dolt server per spacetree; the workspace placement it discussed is now owned by `<spec:beads-out-of-tree-storage>`.
 - `README.md` — the spacetree definition, the human-first constraint, and the tooling inventory.
 - `docs/beads-refs/` — the `bd` data model, how-to, and tag vocabulary, including the `issue_prefix` and `external:<project>:<capability>` mechanics this spec leans on.
-- `<spec:spacetree-daemons>` — the `<spacetree>/.state/` convention and its place in spacetree state.
+- `<spec:spacetree-repo>` — the state roots under `<spacetree root>/.spacetree/`, the branch each is checked out from, and the machine-state root the project registry lands in.
 - `EXPLO-*.md` in this directory — the pre-spec design record (resolver-core, registry, routing-vs-aggregate, bd-wrapper-interaction).
 - `<spec:task-scopes>` — the task-scopes spec: the `:scope` model and how the third target segment is translated into `bd` label arguments.
 
@@ -306,7 +306,7 @@ wkg all list --status=open       # every project, every spacetree
 Whether the registry should also cache the prefix, or always re-read the project info at the destination, is open.
 Non-blocking.
 
-**Spacetree name uniqueness** — Spacetree names now come from `spacetree.toml` in the config repo rather than a directory name.
+**Spacetree name uniqueness** — Spacetree names now come from `spacetree.toml` in the spacetree repo rather than a directory name.
 How a duplicate name is detected across the known-spacetrees list, and by whom, is open.
 Non-blocking.
 

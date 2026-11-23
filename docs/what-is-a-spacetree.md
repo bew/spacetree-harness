@@ -3,12 +3,14 @@
 A spacetree is a rooted directory that gathers everything for one coherent domain: its projects, documentation, tasks, configuration, and supporting tooling.
 The tree's own structure is its business — no layout is imposed.
 
-Its root is the directory carrying the `.spacetree-root` marker file.
+Its root is the directory carrying the `.spacetree-repo` marker, a symlink to the tree's own git repo.
 Tooling walks up from wherever you are to find that marker, and so locates the enclosing tree.
+The tree's shared material — agent instructions, skills, docs, scripts — is reached through a second marker, `.spacetree-shared-root`, whose target is the `tree-shared/` directory inside that repo.
+The repo is where the tree keeps what it owns: its configuration and that shared material, versioned like any other project.
 
 A tree also has a name, and the name is stable: it does not follow the root directory's name or its location.
 Renaming or moving the root directory leaves the tree's name untouched, so tasks, notes, and tooling that refer to the tree keep working.
-The name lives in the tree's configuration.
+The name is declared in the tree's configuration, in the repo's `spacetree.toml`.
 
 ## Why the word exists
 
@@ -33,7 +35,7 @@ Two trees may share a backend for one of those, and even then each keeps its own
 ## Where `devtree` fits
 
 `devtree` names a spacetree whose work is code: repositories, development environments, build and test tooling.
-Calling a tree a devtree is vocabulary and nothing more: no type system, no inheritance, no capability profile, and nothing in the harness branches on the word.
+Calling a tree a devtree is vocabulary and nothing more: no type system, no inheritance between trees, no capability profile, and nothing in the harness branches on the word.
 
 ## What the core assumes
 

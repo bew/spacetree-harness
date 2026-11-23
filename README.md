@@ -6,6 +6,8 @@ This repo is the harness meta-layer: it holds the tooling, decisions, and eventu
 ## The spacetree
 
 The harness organizes work into spacetrees: rooted directories that gather one domain's projects, documentation, tasks, and configuration.
+Two markers at a tree's root say what the tree is bound to: `.spacetree-repo` points at the tree's own git repo, and `.spacetree-shared-root` points at the shared material inside it.
+The repo holds the tree's configuration and the content its projects inherit; the tree's name is declared there, not derived from a directory.
 Read [what is a spacetree](./docs/what-is-a-spacetree.md) for the concept, how boundaries work, and how `spacetree` relates to it.
 
 ## Human-first constraint
@@ -31,7 +33,7 @@ Each exposed on flake `packages.<system>.*`.
 - `wk` (planned): the task frontend (`wk`/`wkg`/`wkt`), whose `wk init` bootstraps a project's project info and beads workspace.
   (to understand why, read [my `bd init` complaints](./docs/beads-init-complaints.md))
 - `spacetree`: CLI over the spacetree itself.
-  For now only `spacetree root --json`, which resolves the enclosing spacetree root by walking up for the `.spacetree-root` marker and prints `{name, path}`.
+  For now only `spacetree root --json`, which walks up for the `.spacetree-repo` marker, follows it to the spacetree repo, and prints the name from that repo's `spacetree.toml` together with the root, the repo, the shared root, and the machine-state label.
 
 ## Status
 

@@ -17,7 +17,7 @@ A personal frontend CLI (`wk`/`wkg`/`wkt`) that exposes the harness task-trackin
 - No backward compatibility is needed: there are no scripts or habits tied to the old command names.
 - Upstream `bd` is **not** on `PATH`; `wk`/`wkg`/`wkt` carry it inside their Nix closure and invoke it internally. The trio is the only user-facing task surface.
 - The routing spec's `exec bd from PATH` wrapper mechanism is superseded: wrapper logic (server attach + `:scope` rewrite) moves into `wk`, and `wkg`/`wkt` exec `wk` (see *Decisions*).
-- `tooling/beads-devtree-init/beads-devtree-init` (the draft `bd init` wrapper: resolves `.spacetree-root`, refuses if `.beads/` exists, runs `bd init --stealth --skip-agents --skip-hooks`, undoes bd's auto-commit, force-tracks the wanted `.beads` files, installs beads skills) is superseded rather than relocated: `wk` intercepts the `init` verb, and the workflow it runs is owned by `<spec:wk-init>`. `init` is thus the one verb `wk` intercepts rather than forwarding to `bd`.
+- `tooling/beads-devtree-init/beads-devtree-init` (the draft `bd init` wrapper: resolves `.spacetree-repo`, refuses if `.beads/` exists, runs `bd init --stealth --skip-agents --skip-hooks`, undoes bd's auto-commit, force-tracks the wanted `.beads` files, installs beads skills) is superseded rather than relocated: `wk` intercepts the `init` verb, and the workflow it runs is owned by `<spec:wk-init>`. `init` is thus the one verb `wk` intercepts rather than forwarding to `bd`.
 
 ## Design crux
 

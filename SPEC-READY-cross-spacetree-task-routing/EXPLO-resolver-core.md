@@ -3,7 +3,7 @@
 ## Findings
 
 - `bd` resolves a workspace by walking up for `.beads/`; it has no concept of multiple spacetrees.
-- Spacetree root detection is already solved: `.spacetree-root` marker plus `spacetree root --json`, which prints `{name, path}`.
+- Spacetree root detection is already solved: `.spacetree-repo` marker plus `spacetree root --json`, which prints the root path, the repo path, the shared root, the machine-state label, and the configured name.
 - `issue_prefix` is assigned per project at init time by `wk init` (`--prefix`, interactive prompt); it is the identity `bd` filters every query on.
 - Addressing candidate grammar from the originating handoff: `bdg <spacetree>:<project>`, `bdg <project>`, `bdg <spacetree>`, and `bdt` (spacetree pre-resolved from cwd).
 - Gas City's `gc bd --rig <name>` establishes the ceiling for cross-spacetree routing: chdir + exec, no cross-rig joining.

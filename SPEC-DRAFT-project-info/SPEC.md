@@ -16,7 +16,7 @@ Project-level metadata (ticket system, docs system, external references) has no 
 
 This spec introduces a single small file at the project root, `project-info.toml`.
 Where the repo is ours to modify, the file is committed like any other config and reviewed as a diff.
-Where the repo is not ours (an open-source clone), a dot-prefixed `.project-info.toml` symlink points at the same TOML inside the spacetree config repo, and git never sees it.
+Where the repo is not ours (an open-source clone), a dot-prefixed `.project-info.toml` symlink points at the same TOML inside the spacetree repo, and git never sees it.
 
 The project info is human-first: ordinary TOML, readable and greppable, edited by hand, with no daemon, no database, and no generated cache behind it.
 Harness tooling reads it on demand and ignores sections it does not understand, so the file can carry project-specific extras without a schema change.
@@ -39,21 +39,21 @@ The stable project identifier declared by the project info; the name the routing
 The `issue_prefix` beads uses for issue IDs, such as `ghh-1a2b`; owned by the project info, but only beads consumes it.
 
 **project info store** (new!):
-The `project-infos/<key>.toml` directory inside the spacetree config repo, defined by the spacetree-config-repo spec.
+The `projects/<key>.toml` directory inside the spacetree repo, defined by the spacetree-repo spec.
 
-**config repo** (existing):
-The per-spacetree git repository the `.spacetree-root` symlink points at; defined by the spacetree-config-repo spec.
+**spacetree repo** (existing):
+The per-spacetree git repository the `.spacetree-repo` symlink points at; defined by the spacetree-repo spec.
 
 ## Naming & IDs
 
 Two filenames exist, and exactly one location: the project repo root.
 
 - `project-info.toml` — tracked project info, committed with the repo.
-- `.project-info.toml` — linked project info, a symlink into the config repo.
+- `.project-info.toml` — linked project info, a symlink into the spacetree repo.
 
-**Project key** grammar: `[A-Za-z0-9][A-Za-z0-9-]*`.
+**Project key** grammar: `[a-z0-9][a-z0-9-]*`.
 It addresses the project, so it must survive renames of the directory, the repo, and the beads prefix.
-Case is preserved, but uniqueness within a spacetree is enforced case-insensitively, because state directories may land on a case-insensitive filesystem.
+Uniqueness within a spacetree is exact and case-free, because the grammar admits no uppercase; state directories therefore land on one name on every filesystem.
 Uniqueness across spacetrees is not required, because the routing grammar qualifies the key with the spacetree.
 
 **Beads prefix**: beads' own `issue_prefix` grammar, supplied by the project info and not interpreted by the harness.
@@ -74,7 +74,7 @@ The worktree fallback is not a search either: `git rev-parse --git-common-dir` n
 Sharing a parent's identity is instead an explicit opt-in: a nested checkout may create `.project-info.toml` pointing at the parent's `project-info.toml`, which gives it the parent's key and therefore the parent's beads workspace.
 That is the same outcome as inheriting by search, except that it is visible in the repo and appears in a diff.
 
-For a linked project info, the symlink conventionally targets `<config repo>/project-infos/<key>.toml`, and the store filename equals the key declared inside the file.
+For a linked project info, the symlink conventionally targets `<spacetree repo>/projects/<key>.toml`, and the store filename equals the key declared inside the file.
 Resolution does not enforce that location: a symlink pointing elsewhere still resolves, and then only the file content is read.
 A store filename that disagrees with the key declared inside it is an error rather than a silent preference, since it means two identities now name one file.
 That check applies only to files inside the store: a link to another repo's `project-info.toml` carries a filename that says nothing about the key.
@@ -117,7 +117,7 @@ $ wk init
   detected: not yours (gh: no push access)
   Is this repo yours?
   [m] me    — commit project-info.toml to this repo
-  [o] other — symlink .project-info.toml to the spacetree config repo
+  [o] other — symlink .project-info.toml to the spacetree repo
   owner [m/o]: o
 ```
 
@@ -143,7 +143,7 @@ wk init --owner=me
 wk init --owner=other
 ```
 
-Creating a linked project info writes the store file at `<config repo>/project-infos/<key>.toml` if it does not exist yet, creates the `.project-info.toml` symlink, and adds that filename to `.git/info/exclude`.
+Creating a linked project info writes the store file at `<spacetree repo>/projects/<key>.toml` if it does not exist yet, creates the `.project-info.toml` symlink, and adds that filename to `.git/info/exclude`.
 Creating a tracked one only writes `project-info.toml`, and leaves exclusion alone.
 Neither form touches an existing project info, and `wk init` refuses when both files are already present.
 
@@ -155,7 +155,7 @@ $EDITOR project-info.toml
 git add project-info.toml
 
 # linked, in a repo you do not own
-ln -s ~/self-config/project-infos/greenhouse-hub.toml .project-info.toml
+ln -s ~/work-stuff/spacetree-home/projects/greenhouse-hub.toml .project-info.toml
 printf '.project-info.toml\n' >> .git/info/exclude
 ```
 
@@ -168,7 +168,7 @@ ln -s ../project-info.toml .project-info.toml
 ## Resolution & Identity
 
 The project key is the addressing identity.
-Everything that names a project uses it: `wkg <spacetree>:<key>:<scope>`, the project registry, `external:<key>:<cap>` references, and `<spacetree>/.state/beads-by-project/<key>/`.
+Everything that names a project uses it: `wkg <spacetree>:<key>:<scope>`, the project registry, `external:<key>:<cap>` references, and `<spacetree root>/.spacetree/shared-state/beads-by-project/<key>/`.
 `external:<key>:<cap>` follows the beads syntax and is currently inert: `bd` stores the edge without resolving it, and the grammar and resolution are open in `<spec:cross-spacetree-task-routing>`.
 The beads prefix is an attribute, consumed only by beads, and renaming it never moves a workspace or changes an address.
 
@@ -199,7 +199,7 @@ The repo root is the unit the routing layer addresses, so one file per repo keep
 The linked form is excluded through `.git/info/exclude`, never through the repo's own `.gitignore`.
 The distinction matters: `.git/info/exclude` is per-clone and untracked, so linking a project info cannot produce a diff in a repo someone else owns, while a `.gitignore` entry would.
 
-The project info store (`project-infos/<key>.toml`) lives in the spacetree config repo, so linked project infos are versioned and reviewed there rather than in the repos they describe.
+The project info store (`projects/<key>.toml`) lives in the spacetree repo, so linked project infos are versioned and reviewed there rather than in the repos they describe.
 The harness never writes to a tracked project info; `wk init` creates files, and every later edit is a human edit.
 
 In scope:
@@ -213,7 +213,7 @@ Out of scope:
 
 - The `wk init` command itself — its flags, prompts, and ordering belong to `<spec:wk-init>`.
 
-- The config repo itself and how its path is found (spacetree-config-repo spec).
+- The spacetree repo itself and how its path is found (spacetree-repo spec).
 - The beads workspace (beads out-of-tree storage spec).
 - Registry indexing and routing grammar (cross-spacetree task routing spec).
 - Any other spacetree-wide setting that might later land in `spacetree.toml`.
@@ -227,11 +227,11 @@ It also breaks exactly where the design is needed: a worktree checkout (`feature
 
 The chosen design pays one small file per project to make identity explicit.
 Tracked project info keeps identity in the project's own history, where it is reviewed and survives a fresh clone.
-Linked project info covers the repos we do not own, without creating a diff, at the cost of depending on the spacetree config repo being present.
+Linked project info covers the repos we do not own, without creating a diff, at the cost of depending on the spacetree repo being present.
 
-**Always symlink into the config repo.**
+**Always symlink into the spacetree repo.**
 Uniform, and every project info is versioned in one place.
-Costs: repos we own no longer state their own identity, a clone outside the spacetree has no identity at all, and the config repo becomes a single point of failure for every project.
+Costs: repos we own no longer state their own identity, a clone outside the spacetree has no identity at all, and the spacetree repo becomes a single point of failure for every project.
 
 **Always tracked, never linked.**
 The most portable and the simplest rule to explain.
@@ -246,7 +246,7 @@ Prefer deriving nothing from the environment; a wrong key that silently shares o
 
 ## Related artifacts
 
-- `<spec:spacetree-config-repo>` — where the config repo and the `project-infos/` store live.
+- `<spec:spacetree-repo>` — where the spacetree repo and the `projects/` store live.
 - `<spec:wk-init>` — the bootstrap command that creates a project info and a beads workspace.
 - `<spec:beads-out-of-tree-storage>` — the workspace keyed by the project key.
 - `<spec:cross-spacetree-task-routing>` — the registry and the `spacetree:project:scope` grammar that consumes the key.

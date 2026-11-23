@@ -24,8 +24,8 @@ bootstrap a project without reading four specs to learn the order of steps.
 - `<spec:project-info>` — project info file, key grammar, ownership detection, the
   `wk init` ownership prompt.
 - `<spec:beads-out-of-tree-storage>` and `DISCOVERY.md` — external `BEADS_DIR`
-  workspace under `<spacetree>/.state/beads-by-project/<key>/`, verified against bd 1.3.0.
-- `<spec:spacetree-config-repo>` — the config repo holding the project info store.
+  workspace under `<spacetree root>/.spacetree/shared-state/beads-by-project/<key>/`, verified against bd 1.3.0.
+- `<spec:spacetree-repo>` — the spacetree repo holding the project info store.
 - `docs/beads-init-complaints.md` — why stock `bd init` is overridden at all.
 - `tooling/beads-devtree-init/beads-devtree-init` — the legacy wrapper whose behavior is being
   reimplemented and partly superseded.
@@ -75,12 +75,12 @@ Every current mention of `wk init` or `beads-devtree-init`:
 
 - The exact step order and failure/rollback behavior of a partially completed `wk init`.
 - Whether `wk init` is idempotent, resumable, or refuses once any of its outputs exist.
-- How `wk init` behaves without a spacetree marker, without a config repo, or outside a git repo.
+- How `wk init` behaves without a spacetree marker, without a spacetree repo, or outside a git repo.
 - Which steps stay interactive and which require flags in a non-interactive run.
 - Whether the tooling package rename happens in the same milestone as the Rust rewrite.
 
 ## Project-global docs
 
 Candidate set: `README.md`, `docs/beads-init-complaints.md`, `docs/beads-refs/`.
-Terms already defined there: spacetree, `.spacetree-root` marker, human-first constraint, stock
+Terms already defined there: spacetree, `.spacetree-repo` marker, human-first constraint, stock
 `bd init` complaints. The spec references these rather than restating them.

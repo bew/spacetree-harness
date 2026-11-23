@@ -31,7 +31,7 @@ The prompts and their wording belong to the specs that own each artifact; this s
 wk init: initialized greenhouse-hub
 spacetree root: <spacetree>
 project info: project-info.toml
-beads workspace: <spacetree>/.state/beads-by-project/greenhouse-hub/
+beads workspace: <spacetree root>/.spacetree/shared-state/beads-by-project/greenhouse-hub/
 nothing committed
 ```
 
@@ -60,7 +60,7 @@ Staging and committing stay with the human.
 `wk init` is a fixed pipeline: each step consumes what the previous one produced, and no step is skippable.
 
 ```pseudocode
-resolve repo root, spacetree root, config repo, spacetree name
+resolve repo root, spacetree root, spacetree repo, spacetree name
 refuse when a project info or the beads workspace already exists
 key, owner, prefix := project info step     # the answers that step collects
 workspace          := beads workspace step  # workspace per <spec:beads-out-of-tree-storage>
@@ -79,8 +79,8 @@ Skill installation is not part of this command, and projects carry no skills of 
 Before any write, `wk init` requires:
 
 - the project root as the current directory, and that root is a git work tree, including linked worktrees;
-- a `.spacetree-root` marker above it, with a config repo that resolves (`<spec:spacetree-config-repo>`); a missing or dangling one is a refusal, not a fallback.
-- a state worktree at `<spacetree>/.state/beads-by-project/`, created by `spacetree init` (`<spec:spacetree-config-repo>`); a missing checkout is a refusal, not something `wk init` creates;
+- a `.spacetree-repo` marker above it, with a spacetree repo that resolves (`<spec:spacetree-repo>`); a missing or dangling one is a refusal, not a fallback.
+- a state worktree at `<spacetree root>/.spacetree/shared-state/`, created by `spacetree init` (`<spec:spacetree-repo>`); a missing checkout is a refusal, not something `wk init` creates;
 - no project info in the repo (`<spec:project-info>`);
 - no existing beads workspace for the resolved key (`<spec:beads-out-of-tree-storage>`).
 
@@ -92,13 +92,13 @@ A failed precondition stops the run before anything is written.
 The project info step and the beads workspace step delegate their file rules to `<spec:project-info>` and `<spec:beads-out-of-tree-storage>`.
 This spec owns their order, the flags each step reads, and the manifest.
 
-`wk init` does not scaffold a missing config repo, marker, state branch, or state worktree: it refuses and points at `spacetree init`, which owns spacetree creation, its docs, and the spacetree-level skills.
+`wk init` does not scaffold a missing spacetree repo, marker, state branch, or state worktree: it refuses and points at `spacetree init`, which owns spacetree creation, its docs, and the spacetree-level skills.
 It also never installs git hooks, edits `AGENTS.md`, or commits.
 
 ### Open Questions
 
-**`spacetree init` contract** — What `spacetree init` owns: config repo scaffolding, the marker, `spacetree.toml`, the state branch and state worktree, and spacetree-level skills, plus the exact refusal text `wk init` prints when the checkout is missing.
-Non-blocking. `spacetree init` is covered only in fragments today (`<spec:spacetree-daemons>`, `<spec:spacetree-config-repo>`); no spec owns the whole command.
+**`spacetree init` contract** — What `spacetree init` owns: spacetree repo scaffolding, the marker, `spacetree.toml`, the state branch and state worktree, and spacetree-level skills, plus the exact refusal text `wk init` prints when the checkout is missing.
+Non-blocking. `spacetree init` is covered only in fragments today (`<spec:spacetree-daemons>`, `<spec:spacetree-repo>`); no spec owns the whole command.
 
 ## Project Info Step
 
@@ -126,15 +126,15 @@ The derived path, the workspace contents, and every invariant about placement be
 this section fixes only how the command gets there.
 
 ```pseudocode
-state worktree := <spacetree>/.state/beads-by-project  # checkout of beads-devtree-init, created by spacetree init
-workspace := state worktree/<key>
+state worktree := <spacetree root>/.spacetree/shared-state  # checkout of PROTECTED/spacetree-shared-state, created by spacetree init
+workspace      := state worktree/beads-by-project/<key>
 run bundled bd init with BEADS_DIR=workspace, cwd=project root
     --prefix=<prefix> --non-interactive --stealth --skip-agents --skip-hooks
 print the workspace path
 ```
 
 The state worktree is a spacetree-level resource, not a per-project one: `spacetree init` creates it when it scaffolds the spacetree, and every `wk init` reuses it.
-`wk init` never creates, moves, or prunes the worktree, and it never creates the state branch; both belong to `<spec:spacetree-config-repo>`.
+`wk init` never creates, moves, or prunes the worktree, and it never creates the state branch; both belong to `<spec:spacetree-repo>`.
 A spacetree whose checkout is missing fails the precondition above rather than being repaired here.
 
 `bd init` runs with the project root as its working directory and reaches the workspace through `BEADS_DIR`.
@@ -159,8 +159,8 @@ There is no rollback: the outputs are ordinary files, and a human can see and re
 Every precondition is checked before the first write, so the common refusals leave nothing behind:
 
 - the current directory is not the root of a git work tree;
-- no `.spacetree-root` marker above it, or a config repo that does not resolve;
-- no state worktree at `<spacetree>/.state/beads-by-project/`, which means `spacetree init` has not run;
+- no `.spacetree-repo` marker above it, or a spacetree repo that does not resolve;
+- no state worktree at `<spacetree root>/.spacetree/shared-state/`, which means `spacetree init` has not run;
 - a project info already exists in the repo;
 - the workspace directory for the resolved key already exists;
 - the key is already declared by another repo path (`<spec:project-info>`);
@@ -233,7 +233,7 @@ Out of scope, with the owning spec:
 - the project info format, key grammar, ownership detection, resolution, and store layout — `<spec:project-info>`;
 - workspace placement, contents, and how task state is committed — `<spec:beads-out-of-tree-storage>`;
 - the `wk`/`wkg`/`wkt` family, its packaging, and the fact that `init` is the one intercepted verb — `<spec:wk-beads-wrappers>`;
-- the marker, the config repo, and the state branch — `<spec:spacetree-config-repo>`;
+- the marker, the spacetree repo, and the state branch — `<spec:spacetree-repo>`;
 - spacetree-level skills, which belong to the future `spacetree init`;
 - target resolution for other spacetrees and projects — `<spec:cross-spacetree-task-routing>`.
 
@@ -244,7 +244,7 @@ What a run may write:
 - the manifest on stdout.
 
 Nothing else.
-It does not touch `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.gitignore`, git hooks, or any file in another project, and it does not commit or push in either the project repo or the config repo.
+It does not touch `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.gitignore`, git hooks, or any file in another project, and it does not commit or push in either the project repo or the spacetree repo.
 The writes are confined to files a human would otherwise create by hand.
 
 ## Alternatives & Tradeoffs
@@ -282,9 +282,9 @@ Use the chosen design when both artifacts are always created together, which is 
 - `<spec:project-info>` — the file this command creates, and the key, prefix, and ownership it collects.
 - `<spec:beads-out-of-tree-storage>` — the workspace this command creates, its placement, and the state branch.
 - `<spec:wk-beads-wrappers>` — the `wk` frontend that hosts the verb, and the Rust implementation that replaces the draft tool.
-- `<spec:spacetree-config-repo>` — the marker, config repo, and state worktree the command depends on.
+- `<spec:spacetree-repo>` — the marker, spacetree repo, and state worktree the command depends on.
 - `<spec:cross-spacetree-task-routing>` — the project key and registry this command feeds.
-- `<spec:spacetree-daemons>` — the `<spacetree>/.state/` convention the state worktree lives under.
+- `<spec:spacetree-daemons>` — the runtime state root under `<spacetree root>/.spacetree/`, beside the state worktree.
 - `<spec:spacetree-rename>` — the vocabulary rename that deliberately leaves the legacy draft untouched.
 - `docs/beads-init-complaints.md` — the stock `bd init` side effects that justify the flags and the external workspace.
 - `tooling/beads-devtree-init/` — the unused Python draft, its Nix package, and its bats suite.
@@ -304,7 +304,7 @@ Cross-referenced with `<spec:cross-spacetree-task-routing>`, which owns the answ
 Non-blocking.
 
 **Protection bootstrap** — Whether the `spacetree init` run that creates the state branch also enables forge protection, or only reports it as missing.
-Owned by `<spec:spacetree-config-repo>`; nobody in the harness commits during init, so an unprotected branch only matters at the first `wk commit`.
+Owned by `<spec:spacetree-repo>`; nobody in the harness commits during init, so an unprotected branch only matters at the first `wk commit`.
 Non-blocking.
 
 **Terminology & Key Concepts** (TKC) — Whether this section is needed for this spec.

@@ -13,7 +13,7 @@ The harness wants the setup, the files, and the storage outside the repo.
 Moving only the database data directory would leave the workspace — config, metadata, README — inside the repo.
 This spec moves the entire workspace instead: beads 1.3 accepts a `BEADS_DIR` environment variable naming the workspace directory, and the harness verified that a workspace created there receives every file `bd init` produces while the repo stays untouched.
 
-Workspaces live at `<spacetree>/.state/beads-by-project/<project key>/`, checked out from a protected state branch of the spacetree config repo and keyed by the identity defined in the project info spec, so task history is versioned without a repo of its own and a prefix rename never moves any data.
+Workspaces live at `<spacetree root>/.spacetree/shared-state/beads-by-project/<project key>/`, checked out from a protected state branch of the spacetree repo and keyed by the identity defined in the project info spec, so task history is versioned without a repo of its own and a prefix rename never moves any data.
 `wk` is the only entry point and sets `BEADS_DIR` for every call; upstream `bd` is deliberately not on `PATH`.
 Because task history is the one thing a mistake cannot recreate, that branch is protected against force-push and deletion at the forge, and `wk` refuses to publish to it otherwise.
 
@@ -29,7 +29,7 @@ The directory holding one project's tracker state as a unit — configuration, m
 `bd` reads and writes it as one thing, and nothing else in the harness interprets its contents.
 
 **external workspace**:
-A beads workspace placed under `<spacetree>/.state/beads-by-project/<project key>/` rather than inside the project repo.
+A beads workspace placed under `<spacetree root>/.spacetree/shared-state/beads-by-project/<project key>/` rather than inside the project repo.
 It holds the files `bd init` produces; the contents are pinned down in *Placement / Layout*, and the command that creates it belongs to `<spec:wk-init>`.
 
 **`BEADS_DIR`**:
@@ -41,39 +41,40 @@ The identity from the project info spec that names the workspace directory.
 The beads prefix is a separate attribute, so a prefix change never moves the workspace.
 
 **state branch**:
-The branch `beads-devtree-init` of the spacetree config repo, holding task state rather than configuration.
+The branch `PROTECTED/spacetree-shared-state` of the spacetree repo, holding task state rather than configuration.
 It is protected at the forge against force-push and deletion.
 
 **state worktree**:
-The checkout of that branch at `<spacetree>/.state/beads-by-project/`.
-Every external workspace lives inside it, and the human can read the task files there directly.
+The checkout of that branch at `<spacetree root>/.spacetree/shared-state/`.
+`beads-by-project/` is this consumer's directory inside it, and every external workspace lives below that.
+The human can read the task files there directly.
 
 ## Naming & IDs
 
 A workspace path is derived, never stored:
 
 ```pseudocode
-repo root     := git rev-parse --show-toplevel, or the main worktree's root for a linked worktree
-spacetree root  := walk up from repo root to the `.spacetree-root` symlink
-project info  := resolve at repo root (see the project info spec)
-state worktree := <spacetree root>/.state/beads-by-project  (config repo, branch `beads-devtree-init`)
-workspace     := state worktree/<project key>
+repo root      := git rev-parse --show-toplevel, or the main worktree's root for a linked worktree
+spacetree root := walk up from repo root to the `.spacetree-repo` symlink
+project info   := resolve at repo root (see the project info spec)
+state worktree := <spacetree root>/.spacetree/shared-state  (worktree of the spacetree repo, branch `PROTECTED/spacetree-shared-state`)
+workspace      := state worktree/beads-by-project/<project key>
 ```
 
 The path depends on two things only: which spacetree the repo sits in, and the project key.
 The beads prefix, repo name, checkout path, and branch do not appear in it.
 
-- **Directory name**: the project key verbatim, case preserved.
-  Lookups are case-insensitive, matching the key's uniqueness rule.
+- **Directory name**: the project key verbatim.
+  Keys are lowercase, so the name is too.
 - **No prefix in the path**: the prefix lives in the workspace's own config and metadata, so renaming it never moves data.
 - **Spacetree scope**: state belongs to one spacetree.
   The same repo cloned into another spacetree gets that spacetree's workspace, never the first one's.
 - **Missing project info**: there is no workspace path, and beads commands fail rather than guessing one from the directory name.
 - **Versioned file**: only `issues.jsonl` is tracked on the state branch.
   Everything else in a workspace is generated and ignored.
-- **State branch name**: `beads-devtree-init`, fixed for every spacetree.
+- **State branch name**: `PROTECTED/spacetree-shared-state`, fixed for every spacetree.
   A fixed name lets a forge protection rule name the exact branch, and the `PROTECTED/` prefix marks what the branch requires.
-- **One repo, two branches**: task state shares the config repo but not its branch, so configuration history and task history never mix.
+- **One repo, two branches**: task state shares the spacetree repo but not its branch, so configuration history and task history never mix.
 
 ## Interface / How to use
 
@@ -85,7 +86,7 @@ The beads prefix, repo name, checkout path, and branch do not appear in it.
 wk <verb> <args>:
     root      := spacetree root, from the cwd's repo
     info      := project info, resolved at the repo root
-    workspace := root/.state/beads-by-project/info.key
+    workspace := root/.spacetree/shared-state/beads-by-project/info.key
     require workspace exists unless verb is init
     BEADS_DIR := workspace
     exec bundled bd <verb> <args>
@@ -114,7 +115,7 @@ wk commit:
     require workspace exists
     stage <workspace>/issues.jsonl on the state branch
     commit
-    remote := the config repo's remote
+    remote := the spacetree repo's remote
     if remote is absent or its forge cannot protect branches:
         warn "task history is local only; nothing was pushed"
         exit non-zero
@@ -134,19 +135,19 @@ Workspace creation belongs to `wk init`, specified in `<spec:wk-init>`.
 From this spec's side, that command must satisfy these properties:
 
 - **At the derived path**, named by the project key and carrying the project's beads prefix;
-- **Inside the state worktree**, so the workspace lands on the config repo's state branch, not in machine-only state;
+- **Inside the state worktree**, so the workspace lands on the spacetree repo's state branch, not in machine-only state;
 - **With the repo untouched**, because no beads artifact belongs in a working tree.
 
 How it creates the workspace — the `bd init` invocation, the working directory, the flags, and the cleanup around beads' git integration — is that spec's business, not this one's.
 
 ## Placement / Layout
 
-`<spacetree>/.state/beads-by-project/` is a worktree of the spacetree config repo, checked out on its state branch.
-Each workspace sits inside it:
+`<spacetree root>/.spacetree/shared-state/` is a worktree of the spacetree repo, checked out on its state branch.
+`beads-by-project/` is the directory beads state owns inside it, one workspace per project key:
 
 ```text
-<spacetree>/.state/
-├── beads-by-project/           # state worktree: the config repo's state branch
+<spacetree root>/.spacetree/shared-state/   # worktree of PROTECTED/spacetree-shared-state
+├── beads-by-project/           # the directory beads state owns inside the shared state root
 │   ├── .gitignore              # keeps everything but each workspace's issues.jsonl out of git
 │   ├── greenhouse-hub/         # one external workspace per project key
 │   │   ├── issues.jsonl        # the only tracked file
@@ -155,16 +156,16 @@ Each workspace sits inside it:
 │   │   ├── README.md           # beads' generated workspace readme
 │   │   └── embeddeddolt/       # the workspace's Dolt database, generated
 │   └── spacetree-harness/
-└── …                           # registry, daemons
+└── …                           # other consumers' state
 ```
 
-The worktree root carries a tracked `.gitignore` that ignores everything except each workspace's `issues.jsonl`, so beads' generated files never enter a commit and `git status` stays readable.
-The rest of `.state/` remains unversioned machine state; the state worktree is versioned only because it is a checkout of the config repo.
+`beads-by-project/` carries a tracked `.gitignore` that ignores everything except each workspace's `issues.jsonl`, so beads' generated files never enter a commit and `git status` stays readable.
+Because it sits inside the shared state checkout, task state is versioned through the spacetree repo's `PROTECTED/spacetree-shared-state` branch; the machine and runtime state roots beside it are not.
 
 Because it is a real checkout, the human reads task files directly:
 
 ```sh
-cd ~/self/.state/beads-by-project/greenhouse-hub
+cd ~/self/.spacetree/shared-state/beads-by-project/greenhouse-hub
 git log --oneline -- issues.jsonl
 jq -r 'select(.status=="open") | .title' issues.jsonl
 ```
@@ -195,14 +196,14 @@ The requirement is on the branch, not on the harness: GitHub branch protection, 
 
 ```console
 $ wk commit
-error: state branch `beads-devtree-init` allows force-push and deletion
-hint: enable branch protection on the config repo's remote, then retry
+error: state branch `PROTECTED/spacetree-shared-state` allows force-push and deletion
+hint: enable branch protection on the spacetree repo's remote, then retry
 ```
 
 On GitHub the check reads the branch's protection or ruleset settings:
 
 ```console
-$ gh api "repos/{owner}/{repo}/branches/PROTECTED%2Fbeads-state-by-project/protection" \
+$ gh api "repos/{owner}/{repo}/branches/PROTECTED%2Fspacetree-shared-state/protection" \
     --jq '{force_push: .allow_force_pushes.enabled, deletion: .allow_deletions.enabled}'
 {"force_push": false, "deletion": false}
 ```
@@ -234,10 +235,10 @@ Invariants the design holds:
 Consequences worth accepting knowingly:
 
 - **Task history leaves project git.** Task changes are not code-reviewed, not part of a repo's history, and not restored by checking out an old commit.
-  History exists, but on the config repo's state branch.
-- **Task state propagates between machines** by cloning or pulling the config repo and, where `spacetree init` has checked it out, reading the state branch worktree.
+  History exists, but on the spacetree repo's state branch.
+- **Task state propagates between machines** by cloning or pulling the spacetree repo and, where `spacetree init` has checked it out, reading the state branch worktree.
   Dolt-native transport (Dolt remotes, `bd dolt push`/`pull`) is out of scope and not used.
-- **Protection requires a forge.** A local-only config repo, or one on a forge without branch protection, cannot satisfy the requirement: each `wk commit` warns and refuses to push, leaving history local.
+- **Protection requires a forge.** A local-only spacetree repo, or one on a forge without branch protection, cannot satisfy the requirement: each `wk commit` warns and refuses to push, leaving history local.
 - **A fresh clone inside a fresh spacetree starts with no tasks.** The workspace belongs to the spacetree, not to the repo, so a repo cloned into a spacetree where `spacetree init` has not run cannot be initialized with `wk init` at all.
 - **Deleting a workspace removes the project's tasks from the checkout**, while deleting a repo leaves an orphan workspace behind.
   Neither leaves a dangling reference inside the workspace's own state, which is why neither needs a cleanup protocol there.
@@ -258,15 +259,15 @@ This is the direction the harness is explicitly moving away from.
 It is the smallest change and keeps a repo self-describing, but it leaves the artifacts that actually annoy — tracked workspace files, generated skills, hook takeover — and still keys state to a checkout.
 
 **Option C — external workspace, no versioning.**
-Workspaces under `.state/beads-by-project/` as plain machine state.
+Workspaces inside the machine-state root as plain machine state.
 Simple and fully isolated from git, but task history is lost with the machine and cannot move between machines at all.
 
 **Option D — Dolt-native transport.**
 `bd dolt push`/`pull` against a Dolt remote, or `bd backup` to a filesystem or DoltHub.
 Beads-native, structured, and built for exactly this, but it needs a server or remote that the harness does not run, and it cannot be nested inside git — the two versioning models do not compose.
 
-**Chosen — external workspace on a config repo state branch.**
-The workspace lives outside every project repo, and its one meaningful file, `issues.jsonl`, is versioned in the spacetree's existing config repo on a separate branch, checked out as a worktree.
+**Chosen — external workspace on a spacetree repo state branch.**
+The workspace lives outside every project repo, and its one meaningful file, `issues.jsonl`, is versioned in the spacetree's existing spacetree repo on a separate branch, checked out as a worktree.
 Advantages: repos stay clean, history and cross-machine propagation come from plain git the human already owns, and `issues.jsonl` is a readable, diffable file.
 Costs: a second branch and a worktree to keep tidy, only `issues.jsonl` survives versioning (Dolt history does not), and task changes never appear in project history.
 
@@ -279,8 +280,7 @@ Use the chosen design when many repos share one spacetree, repos must stay prist
 - `<spec:wk-beads-wrappers>` — owns `wk`, its bundled `bd`, and the `wk commit`/`wkg commit` verbs.
 - `<spec:wk-init>` — owns `wk init`, the command that creates the workspace this spec places.
 - `<spec:cross-spacetree-task-routing>` — resolves `wkg`/`wkt` targets to a project before `wk` derives the workspace.
-- `<spec:spacetree-daemons>` — the `<spacetree>/.state/` convention the state worktree lives under.
-- `SPEC-DRAFT-spacetree-config-repo/DISCOVERY.md` and its spec — the config repo whose state branch holds task history.
+- `<spec:spacetree-repo>` — the state roots under `<spacetree root>/.spacetree/`, the `PROTECTED/` branch convention, and the spacetree repo whose state branch holds task history.
 - `HANDOFF-20260920-beads-shared-server-devtree.md` — the per-spacetree Dolt server decision that this spec deliberately leaves out of scope.
 - `docs/beads-init-complaints.md` — the in-repo side effects that motivated moving the workspace out.
 - `tooling/beads-devtree-init/beads-devtree-init` — the existing bootstrap whose `bd init` handling `wk init` replaces.

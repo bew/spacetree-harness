@@ -15,7 +15,7 @@ Rather than reimplement supervision, the `spacetree` CLI wraps PCS as `spacetree
 
 This spec covers the interface and lifecycle of that wrapper: where the per-spacetree PCS server and its socket live, how process sets are grouped, and how a set is ensured idempotently.
 It is scoped to long-running processes on macOS, with minimal supervision (start/ensure, logs, stop, status) and no restart policy or healthchecks.
-Defining the process tree from Nix is wanted but deferred; the interim config is a plain `process-compose.yaml` at the spacetree root.
+Defining the process tree from Nix is wanted but deferred; the interim config is a plain `process-compose.yaml` at the spacetree repo root.
 Implementation is future work; this document fixes the design.
 
 ## Terminology & Key Concepts
@@ -29,23 +29,23 @@ Implementation is future work; this document fixes the design.
 
 ## Naming & IDs
 
-- **Spacetree marker**: `.spacetree-root`, a symlink whose target is the spacetree config repo (see `<spec:spacetree-config-repo>`); root resolution resolves that target, and the spacetree root is the directory holding the symlink.
-- **Init command**: `spacetree init` — scaffolds the spacetree, creating the `.spacetree-root` symlink to the config repo, the state branch worktree at `.state/beads-by-project/`, and a basic `process-compose.yaml` when none exists.
+- **Spacetree marker**: `.spacetree-repo`, a symlink whose target is the spacetree repo (see `<spec:spacetree-repo>`); root resolution resolves that target, and the spacetree root is the directory holding the symlink.
+- **Init command**: `spacetree init` — scaffolds the spacetree, creating the markers, the state worktrees under `.spacetree/`, and a basic `process-compose.yaml` in the spacetree repo when none exists.
 - **Wrapper command**: `spacetree procs [args…]` — with no arguments it prints a status overview of the spacetree's processes (initially by delegating to a PCS status subcommand); with arguments, every argument after `procs` is forwarded verbatim to PCS.
 - **Ensure command**: `spacetree procs-ensure <namespace>` — takes one positional argument, the process set to ensure.
 - **Attach command**: `spacetree procs-attach` — attaches the interactive TUI to the running server; quitting the TUI does not stop the server.
 - **Process set / namespace**: named by the config author, kebab-case; the name is used verbatim as the PCS namespace.
-- **Config file**: `process-compose.yaml`, fixed, at the spacetree root.
-- **Socket path**: `<spacetree root>/.state/process-compose.sock`, fixed, one per spacetree.
+- **Config file**: `process-compose.yaml`, fixed, at the spacetree repo root.
+- **Socket path**: `<spacetree root>/.spacetree/runtime-state/process-compose.sock`, fixed, one per spacetree.
 
 ## Interface / How to use
 
 The `spacetree` CLI exposes the process machinery through a small subcommand family: `procs`, `procs-ensure`, and `procs-attach`.
 
 `spacetree procs [args…]` is a passthrough to PCS.
-It resolves the enclosing spacetree root, sets the working directory to that root, passes the spacetree socket with `-u`, and execs PCS with any remaining arguments; with no arguments it prints a status overview instead.
+It resolves the enclosing spacetree root, resolves the spacetree repo through the marker, sets the working directory to that repo, passes the spacetree socket with `-u`, and execs PCS with any remaining arguments; with no arguments it prints a status overview instead.
 It never starts the PCS server itself.
-Because the working directory is the spacetree root, PCS auto-discovers `process-compose.yaml`, so no explicit config path is passed.
+Because the working directory is the spacetree repo root, PCS auto-discovers `process-compose.yaml`, so no explicit config path is passed.
 
 Example invocations of `spacetree procs …`:
 
@@ -64,16 +64,16 @@ It returns only once the set's processes are up.
 `spacetree procs-attach` attaches the interactive TUI (to watch logs and inspect the running processes).
 Quitting the TUI detaches the client and leaves the server and its processes running.
 
-`process-compose.yaml` at the spacetree root declares the processes, each assigned to a namespace.
+`process-compose.yaml` at the spacetree repo root declares the processes, each assigned to a namespace.
 
-`spacetree init` scaffolds a spacetree: it creates the `.spacetree-root` symlink to the spacetree config repo in the current directory, checks out the state branch at `.state/beads-by-project/`, and writes a basic `process-compose.yaml` if none exists.
-Creating the symlink and the worktree requires a config repo, so init either creates one or refuses when none exists (see *Global Open Questions* in `<spec:spacetree-config-repo>`).
+`spacetree init` scaffolds a spacetree: it creates the markers, checks out the state roots under `.spacetree/`, and writes a basic `process-compose.yaml` into the spacetree repo if none exists.
+Creating the markers and the worktrees requires a spacetree repo, so init refuses when none exists (see `<spec:spacetree-repo>`).
 It never overwrites an existing config, so it is safe to re-run.
 
 ## Lifecycle & State
 
 One PCS server serves each spacetree, owning all process sets in that tree.
-It listens on the fixed socket `<spacetree root>/.state/process-compose.sock`, which is what `spacetree procs` and `spacetree procs-ensure` address.
+It listens on the fixed socket `<spacetree root>/.spacetree/runtime-state/process-compose.sock`, which is what `spacetree procs` and `spacetree procs-ensure` address.
 
 The server starts detached (`up -D`), either by an explicit `spacetree procs up …` or by `spacetree procs-ensure` when the socket is not live, and then outlives the shell that started it.
 The wrapper itself never starts the server, so a plain `spacetree procs process list` on a spacetree with no server fails as PCS would.
@@ -98,20 +98,16 @@ A server-per-set split would multiply sockets and invite orphaned servers withou
 
 ## Placement / Scope
 
-The PCS config lives at the spacetree root as `process-compose.yaml`; `spacetree init` seeds it there.
-The root is the fixed location because PCS auto-discovers the file from the working directory, and `spacetree procs` always runs from the root.
+The PCS config lives at the spacetree repo root as `process-compose.yaml`; `spacetree init` seeds it there.
+The repo root is the fixed location because the config is versioned beside the rest of the spacetree's configuration, and PCS auto-discovers the file from the working directory `spacetree procs` runs in.
 
-Runtime state lives under the spacetree's `.state/` directory, with the socket at `<spacetree root>/.state/process-compose.sock`.
-`.state/` is a spacetree-wide convention, created lazily by whatever tooling needs it.
-`.state/beads-by-project/` is the one versioned exception: it is a git worktree of the config repo's state branch, not throwaway runtime state (see `<spec:beads-out-of-tree-storage>`).
+Runtime state lives under `<spacetree root>/.spacetree/runtime-state/`, with the socket at `<spacetree root>/.spacetree/runtime-state/process-compose.sock`.
+That root is the spacetree's scratch space: unversioned, never backed up, and safe to delete; the versioned state roots beside it (`.spacetree/shared-state/`, `.spacetree/machine-state/`) are checkouts of the spacetree repo's `PROTECTED/` branches, not runtime state (see `<spec:spacetree-repo>`).
 
 The feature targets macOS only for now.
 
 In scope: the `spacetree` process command family (`procs`, `procs-ensure`, `procs-attach`), `spacetree init`, the config contract, and the server lifecycle.
 Out of scope: defining the process tree from Nix (deferred), restart policies and healthchecks, one-shot processes (long-running only), alternative supervision backends, and cross-spacetree coordination.
-
-One placement wrinkle: the spacetree root is not itself a git repo, so a hand-written `process-compose.yaml` placed there is not version-controlled by default.
-That is accepted for now; moving the file into the config repo, which is versioned, is an open question in `<spec:spacetree-config-repo>`.
 
 ## Alternatives & Tradeoffs
 
@@ -138,15 +134,15 @@ Only the no-wrapper option is genuinely simpler; PCS wins on grouping and script
 
 ## Related artifacts
 
-- **Existing spacetree CLI** (`pkgs/spacetree/spacetree`) — already resolves the enclosing spacetree by walking up for the `.spacetree-root` marker; `spacetree procs` and `spacetree init` build on that same resolution, extended to follow the marker symlink.
+- **Existing spacetree CLI** (`tooling/spacetree/spacetree`) — already resolves the enclosing spacetree by walking up for the `.spacetree-repo` marker; `spacetree procs` and `spacetree init` build on that same resolution, extended to follow the marker symlink.
 - **Spacetree context plugin** (`integrations/opencode-plugin/spacetree-context.ts`) — resolves the marker for agent support; shares the spacetree-root notion this spec relies on.
-- **Spacetree config repo spec** (`<spec:spacetree-config-repo>`) — defines the marker symlink, the config repo, and the state branch that backs `<spacetree>/.state/beads-by-project/`.
-- **Beads shared-server handoff** (`HANDOFF-20260920-beads-shared-server-devtree.md`) — the prior decision to run one Dolt server per spacetree under `<spacetree>/.state/`; this spec generalizes that single-server-per-spacetree pattern to PCS.
+- **Spacetree repo spec** (`<spec:spacetree-repo>`) — defines the marker symlink, the spacetree repo, and the state branch checked out at `<spacetree root>/.spacetree/shared-state/`, which holds the beads-by-project workspaces.
+- **Beads shared-server handoff** (`HANDOFF-20260920-beads-shared-server-devtree.md`) — the prior decision to run one Dolt server per spacetree under the tree's state directory (`.state/` at the time); this spec generalizes that single-server-per-spacetree pattern to PCS.
 - **process-compose upstream docs** — the source for the config schema (`processes`, `namespace`, `up -D`) and the client subcommands the wrapper forwards.
 - **Exploration files** in this directory (`EXPLO-BRIEF.md`, `EXPLO-backend.md`, `EXPLO-pcs-wrapper.md`, `EXPLO-nix-process-tree.md`) — record the backend and interface discussion this spec condenses.
-- **`README.md`** — lists the spacetree config, tree-scoped definitions, and `.state/`-style gaps this feature sits beside.
+- **`README.md`** — lists the spacetree config, tree-scoped definitions, and the state-handling gaps this feature sits beside.
 
 ## Global Open Questions
 
 **Nix-managed process tree** — Where Nix definitions of the process tree live and how they are rendered into PCS config, instead of a hand-written `process-compose.yaml`.
-Non-blocking. Deferred by the user; interim config is plain YAML at the spacetree root.
+Non-blocking. Deferred by the user; interim config is plain YAML at the spacetree repo root.

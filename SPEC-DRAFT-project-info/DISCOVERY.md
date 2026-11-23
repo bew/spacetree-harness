@@ -22,12 +22,12 @@ For: the task-routing layer (project addressing), the spacetree registry, and ex
   Sharing a parent's identity is an explicit `.project-info.toml` link, not an upward search.
 - In repos we do not control, link the project info instead of tracking it.
 - The link is dot-prefixed, so it never collides with a tracked `project-info.toml`.
-- The project info store belongs to the spacetree config repo, not the spacetree root.
+- The project info store belongs to the spacetree repo, not the spacetree root.
 
 ## Settled decisions
 
 - Tracked `project-info.toml` where the repo is controllable; otherwise a gitignored `.project-info.toml` symlink.
-- Symlink target: `<config repo>/project-infos/<key>.toml`.
+- Symlink target: `<spacetree repo>/projects/<key>.toml`.
 - Both files present is an error; neither is a refusal.
 - Exclusion goes through `.git/info/exclude`, never the repo's `.gitignore`.
 - The project key, not the beads prefix, is the addressing identity.

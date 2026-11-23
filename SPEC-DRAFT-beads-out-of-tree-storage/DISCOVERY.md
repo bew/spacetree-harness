@@ -25,15 +25,15 @@ For: the `wk`/`wkg`/`wkt` frontend, and the per-spacetree shared Dolt server han
 ## Constraints stated by the user
 
 - Move the whole workspace, not just DB storage.
-- One beads workspace per spacetree, under the spacetree `.state/`.
+- One beads workspace per spacetree, under the spacetree's `.spacetree/shared-state/`.
 - No migration work: zero projects use `.beads` today.
 - Upstream `bd` stays off `PATH`; `wk` is the only entry point.
 
 ## Settled decisions
 
-- Workspace path: `<spacetree>/.state/beads-by-project/<key>/`, keyed by project key so a prefix rename never moves data.
+- Workspace path: `<spacetree root>/.spacetree/shared-state/beads-by-project/<key>/`, keyed by project key so a prefix rename never moves data.
 - The repo keeps zero beads artifacts.
-- One Dolt server per spacetree at `<spacetree>/.state/dolt.sock`; the socket setting lives in the workspace `config.yaml`, outside the repo, which answers the handoff's blocking question.
+- One Dolt server per spacetree at `<spacetree root>/.spacetree/runtime-state/dolt.sock`; the socket setting lives in the workspace `config.yaml`, outside the repo, which answers the handoff's blocking question.
 - `wk init` runs `bd init` with `BEADS_DIR` set and cwd = repo root, `--prefix` from the project info, plus `--non-interactive --skip-agents --skip-hooks --stealth`.
 - No force-add of beads files, no auto-commit undo.
 - Git worktrees of a project share the one workspace automatically, because `BEADS_DIR` does not depend on cwd.

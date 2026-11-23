@@ -38,7 +38,7 @@ Inspirations: the naming and boundary discussion of October 25, 2026; and the pr
 **spacetree** (new!):
 A rooted directory organizing one coherent domain into projects, documentation, task tracking, configuration, and supporting tooling.
 Each spacetree defines its own local organization and may reference items that live in other spacetrees.
-Its root is the directory carrying the `.spacetree-root` marker.
+Its root is the directory carrying the `.spacetree-repo` marker.
 
 **devtree** (updated!):
 A spacetree whose projects are source-code repositories.
@@ -47,9 +47,9 @@ The narrowing is vocabulary only: nothing in the config, marker, resolution, sco
 It establishes no type system, no inheritance, and no capability profile.
 
 **root marker** (replaced!):
-The `.spacetree-root` entry at a tree root, found by walking up from the current directory.
+The `.spacetree-repo` entry at a tree root, found by walking up from the current directory.
 It replaces `.devtree-root` outright: no tool but the untouched `beads-devtree-init` draft reads the old name after the cutover.
-Its form stays out of this spec — an empty file today, a symlink to a config repo per `<spec:spacetree-config-repo>`.
+Its form is settled by `<spec:spacetree-repo>`: a symlink whose target is the tree's spacetree repo.
 
 **local organization**:
 Where an item lives and how it is managed: the tree's own layout, naming, and conventions.
@@ -118,7 +118,7 @@ Every artifact renamed, in one table; what stays untouched follows it.
 | flake output | `devtree` | `spacetree` |
 | tool source directory | `tooling/devtree/` | `tooling/spacetree/` |
 | CLI binary | `devtree root --json` | `spacetree root --json` |
-| root marker | `.devtree-root` | `.spacetree-root` |
+| root marker | `.devtree-root` | `.spacetree-repo` |
 | HM module | `integrations/devtree-context-for-agents.hm-module.nix` | `integrations/spacetree-context-for-agents.hm-module.nix` |
 | opencode plugin | `integrations/opencode-plugin/devtree-context.ts` | `integrations/opencode-plugin/spacetree-context.ts` |
 | bats tests | `tooling/devtree/devtree.bats` | `tooling/spacetree/spacetree.bats`, following the binary |
@@ -135,11 +135,11 @@ Kept, with reasons:
 - Tree directory names (`~/self`, `~/work`) — the trees themselves are not being renamed, so nothing gains by renaming their directories.
 - beads issue prefix and issue identifiers — the prefix is data, not vocabulary, and no live database depends on it.
 - Dated `HANDOFF-*` notes — records of what was decided at a point in time; rewriting them falsifies the record.
-- the config repo's state branch, named `beads-devtree-init` — a branch name, not prose, and no beads setup exists to migrate it.
+- the spacetree repo's state branch, named `PROTECTED/spacetree-shared-state` — a branch name, not prose, and no beads setup exists to migrate it.
 
 Outside this repository, nothing executes the vocabulary: no installed tool, shell profile, autoenv file, or home-manager module references `devtree` or the marker.
 Documents elsewhere do name it, though: specs in the opencode dotfiles and in `wk-tools` refer to this repository and to its spec slugs by the old names, so they are swept in the same pass to keep those references resolving.
-The other artifacts out there are two marker files in `~/self` and `~/work`, read by nothing; they are renamed in the same pass and now point at each tree's config repo, because they record intent, not because a consumer needs the new name.
+The other artifacts out there are two marker files in `~/self` and `~/work`, read by nothing; they are renamed in the same pass and now point at each tree's spacetree repo, because they record intent, not because a consumer needs the new name.
 
 The `wkg` axis label and the `$XDG_STATE_HOME/devtree-global/` directory exist only in specs describing future tooling, so they follow the prose that names them and no deployed path changes.
 
@@ -185,7 +185,7 @@ rg -n "devtree" --hidden --glob '!.git' .
 
 Every remaining hit must match an exemption:
 
-- `beads-devtree-init` — its name, its flake attribute, the internals of that dead draft, and the config repo's state branch that borrows the name;
+- `beads-devtree-init` — its name, its flake attribute, and the internals of that dead draft;
 - dated `HANDOFF-*` notes;
 - records of the rename itself: this spec's tables and alternatives, and the one line in the concept document stating the narrowing;
 - a sentence where `devtree` deliberately names the code-oriented case.
@@ -198,7 +198,7 @@ Grep gate outside it:
 rg -l "devtree" ~/.dot ~/self/config-projects/dotfiles-alt ~/self/my-projects/wk-tools ~/work/.autoenv.zsh
 ```
 
-Expected empty, followed by `~/self/.spacetree-root` and `~/work/.spacetree-root` existing with no `.devtree-root` beside them.
+Expected empty, followed by `~/self/.spacetree-repo` and `~/work/.spacetree-repo` existing with no `.devtree-root` beside them.
 
 Build and tests:
 
@@ -217,7 +217,8 @@ cd ~/self/my-projects && spacetree root --json
 cd ~/work && spacetree root --json
 ```
 
-Each prints one JSON object whose `name` is the tree directory's basename and whose `path` is its absolute path.
+Each prints one JSON object whose `name` is the name declared in the tree's spacetree repo and whose `path` is the tree root's absolute path.
+The reported name follows that file, never the root directory's own name (see `<spec:spacetree-repo>`).
 A call from a directory belonging to no tree exits non-zero with the `no marker found` error, unchanged from today.
 
 Documents: `docs/what-is-a-spacetree.md` exists, `README.md` links to it, and no `docs/concepts.md` remains.
@@ -244,13 +245,13 @@ Deferred, with the artifact that settles each; paths use their post-rename names
 
 | Topic | Settled by |
 |---|---|
-| marker form — empty file, symlink, or config-repo pointer | `<spec:spacetree-config-repo>` |
+| marker form — empty file, symlink, or spacetree-repo pointer | `<spec:spacetree-repo>` |
 | per-tree config schema, tree name field, variant field | same |
 | which tools serve a tree's tasks and documentation | deliberately unspecified; the per-tree config settles any tool binding |
-| machine-readable `devtree` designation | the config spec; *Global Open Questions* keeps the pointer |
+| machine-readable `devtree` designation | `<spec:spacetree-repo>`, where `variant` is descriptive metadata only |
 | beads scopes, registry, routing | `SPEC-READY-task-scopes/` |
 | daemons, out-of-tree beads storage | `SPEC-READY-spacetree-daemons/`, `SPEC-DRAFT-beads-out-of-tree-storage/` |
-| CLI surface beyond the binary name | `TASK-20261001T1110-spec-spacetree-cli-surface.md` |
+| CLI surface beyond the binary name | `TASK-spacetree-cli-spec-the-cli-surface.md` |
 | `wk` wrappers and `wk init` | `SPEC-READY-wk-beads-wrappers/`, `SPEC-READY-wk-init/` |
 
 The claim that the harness core stays spacetree-agnostic — resolution, scopes, routing, and daemons assuming no project shape — is advisory.
@@ -263,7 +264,7 @@ It does not rewrite git history, and it does not touch beads data, the beads iss
 ## Alternatives & Tradeoffs
 
 **Hard cutover** (chosen) against **marker dual-read plus a CLI alias**.
-A transition release would read `.devtree-root` and `.spacetree-root` and ship both binaries until a removal date.
+A transition release would read `.devtree-root` and `.spacetree-repo` and ship both binaries until a removal date.
 It buys a downtime-free move for consumers that do not exist, and pays with a branch, an alias, and a deadline to remember.
 With no consumer anywhere on the machine, the entire mechanism would be overhead from its first commit.
 
@@ -292,18 +293,18 @@ Accepted costs of the choices above:
 
 - `docs/what-is-a-spacetree.md` — created here; the user-level concept and its brief rationale.
 - `README.md` — the project-global document, reduced to an overview that links to the concept document instead of defining the term itself.
-- `<spec:spacetree-config-repo>` — owns the marker form, the per-tree config schema, and the open question about a descriptive `variant` field.
+- `<spec:spacetree-repo>` — owns the marker form, the per-tree config schema, and the open question about a descriptive `variant` field.
 - `<spec:cross-spacetree-task-routing>` — renamed only; its prose follows the new vocabulary.
 - `SPEC-READY-spacetree-daemons/`, `SPEC-READY-task-scopes/`, `SPEC-DRAFT-beads-out-of-tree-storage/`, `SPEC-READY-wk-beads-wrappers/` — directory and prose renames only; their designs follow the new vocabulary without changing.
 - `<spec:wk-init>` — records why the legacy `beads-devtree-init` draft keeps the old naming in its internals.
 - `tooling/spacetree/` — the CLI and its bats test, both renamed with the binary.
 - `integrations/spacetree-context-for-agents.hm-module.nix`, `integrations/opencode-plugin/spacetree-context.ts` — the agent-context module and plugin, renamed and unregistered today.
-- `TASK-20261001T1110-spec-spacetree-cli-surface.md` — the deferred CLI surface work, renamed with the other active task notes.
+- `TASK-spacetree-cli-spec-the-cli-surface.md` — the deferred CLI surface work, renamed with the other active task notes.
 
-No artifact outside this repository points at these names; the two markers are the only external traces.
+No artifact outside this repository points at these names; the markers are the only external traces.
 
 ## Global Open Questions
 
 1. Whether `devtree` ever gains a machine-readable designation.
-   Non-blocking. The concept document states the distinction is vocabulary only.
-   A descriptive `variant` field, if one is ever wanted, is recorded as an open question in `<spec:spacetree-config-repo>`, which owns the config schema.
+   No, for now: `<spec:spacetree-repo>` defines `variant` as descriptive metadata that changes no resolution, so the distinction stays vocabulary.
+   A field that did change behaviour would be a new question for that spec.
