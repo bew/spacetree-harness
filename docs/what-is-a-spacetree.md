@@ -5,7 +5,7 @@ The tree's own structure is its business — no layout is imposed.
 
 Its root is the directory carrying the `.spacetree-repo` marker, a symlink to the tree's own git repo.
 Tooling walks up from wherever you are to find that marker, and so locates the enclosing tree.
-The tree's shared material — agent instructions, skills, docs, scripts — is reached through a second marker, `.spacetree-shared-root`, whose target is the `tree-shared/` directory inside that repo.
+The tree's shared material — agent instructions, skills, docs, scripts — is reached through a second, optional marker, `.spacetree-shared-root`, whose target is the `tree-shared/` directory inside that repo.
 The repo is where the tree keeps what it owns: its configuration and that shared material, versioned like any other project.
 
 A tree also has a name, and the name is stable: it does not follow the root directory's name or its location.

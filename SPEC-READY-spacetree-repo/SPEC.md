@@ -38,7 +38,7 @@ The `.spacetree-repo` symlink at the spacetree root whose target is the spacetre
 It is what makes a directory a spacetree root, and the only thing root detection walks up for.
 
 **shared marker** (new!):
-The `.spacetree-shared-root` symlink at the spacetree root whose target is the spacetree repo's `tree-shared/` directory.
+An optional `.spacetree-shared-root` symlink at the spacetree root whose target is the spacetree repo's `tree-shared/` directory; without it the tree shares nothing.
 It is a peer of the repo marker rather than a derivation each consumer re-checks: a consumer of inherited content resolves this path and stops.
 Agreement between the markers is an invariant of the spacetree, verified by `spacetree status` rather than re-derived on every read.
 
@@ -81,7 +81,8 @@ The `.spacetree/runtime-state/` directory at the spacetree root, holding scratch
 
 - **Repo marker**: `<spacetree root>/.spacetree-repo`, always a symlink to a directory, with a target stored relative to the directory holding it.
   It is neither a regular file nor a directory, and it is the only entry root detection walks up for.
-- **Shared marker**: `<spacetree root>/.spacetree-shared-root`, always a symlink to a directory, sitting in the same directory as the repo marker, its target relative in the same way.
+- **Shared marker**: `<spacetree root>/.spacetree-shared-root`, always a symlink to a directory when present, sitting in the same directory as the repo marker, its target relative in the same way.
+  It is optional: a tree that shares nothing has no marker, and resolution reports `shared_root: null` instead of failing.
 - **Config file**: `spacetree.toml` at the spacetree repo root.
 
   Minimal shape:
@@ -132,8 +133,9 @@ Every path below is rooted at the spacetree root — the directory the walk-up f
 <spacetree repo> := target of <spacetree root>/.spacetree-repo
 name             := <spacetree repo>/spacetree.toml:name
 
-# inherited content: where the shared material is reachable
-shared := target of <spacetree root>/.spacetree-shared-root
+# inherited content: where the shared material is reachable; optional
+shared := target of <spacetree root>/.spacetree-shared-root, or null when the marker is absent
+          or cannot be honoured
 
 # machine state: which branch this machine backs up onto
 label  := contents of <spacetree root>/.spacetree/machine-state-name
@@ -141,19 +143,23 @@ branch := `PROTECTED/spacetree-state-for-` + label
 ```
 
 A consumer of inherited content never reads `spacetree.toml` and never constructs `tree-shared/` itself; it resolves the shared marker and stops.
-Agreement between the markers is an invariant of the spacetree rather than a check on every read: `spacetree status` reports markers that disagree.
+Shared content is optional: a tree that shares nothing has no shared root, and that absence is what `null` reports.
+Agreement between the markers is judged once, at resolution, rather than on every read; `spacetree status` reports a marker that disagrees.
 
 Resolution fails explicitly, never by fallback, when:
 
 - no `.spacetree-repo` entry exists above the cwd — the directory is not in a spacetree;
 - the repo marker is not a symlink, or its target does not exist;
 - `spacetree.toml` is missing, or it has no `name`;
-- the shared marker is missing, is not a symlink, or its target does not exist;
-- the shared marker is not in the same directory as the repo marker;
-- the shared marker's target is not `<repo>/tree-shared`;
 - a consumer of machine state finds `.spacetree/machine-state-name` missing, or holding something that is not a short label.
 
-The markers are unconditional: `spacetree init` creates them, and `tree-shared/` exists even when it holds nothing yet, so absence always means a broken binding rather than "nothing to share".
+The shared marker is not on that list.
+It is optional, so a missing, dangling, misplaced, or disagreeing shared marker resolves to `null` rather than failing the command.
+A marker that is present but cannot be honoured is warned about on stderr, so a typo stays visible without breaking every command in the tree.
+Null is never a fallback to the tree root: the tree root holds no inherited files, and a consumer that needs shared content treats null as absent rather than as an empty set.
+
+The repo marker is unconditional: `spacetree init` creates it.
+`spacetree init` also creates the shared marker and `tree-shared/`, so a fresh tree shares from day one, but resolution never requires the marker.
 
 The spacetree root path is the directory holding the markers, not the spacetree repo path.
 
@@ -165,9 +171,9 @@ The spacetree root path is the directory holding the markers, not the spacetree 
 {
   "spacetree": {
     "name": "work",
-    "repo": "/Users/…/work-stuff/spacetree-home",
+    "repo": "./spacetree-home",
     "root": "/Users/…/work-stuff",
-    "shared_root": "/Users/…/work-stuff/spacetree-home/tree-shared",
+    "shared_root": "./spacetree-home/tree-shared",
     "machine_state_name": "foo"
   }
 }
@@ -175,12 +181,18 @@ The spacetree root path is the directory holding the markers, not the spacetree 
 
 `root` is the spacetree root — the directory holding the markers — and every other path in the
 answer hangs off it.
+`root` is the only absolute path: a target inside it is spelled `./…`, so the answer reads the
+same on another machine or after the tree moves.
+A marker target outside the root has no such spelling and is reported absolute, rather than as an
+`..` chain whose meaning depends on the depth it is read from.
 The whole answer sits under one `spacetree` key, so a consumer that later asks for other subjects
 can tell them apart without guessing from the field set.
+`shared_root` is a path or `null`, so a consumer that needs inherited content handles the unbound case explicitly rather than assuming a path.
 
 `spacetree status` is the one place that verifies the bindings the rest of the design treats as invariants, and it exits non-zero when any is broken:
 
-- the markers exist, are symlinks, and agree, with `shared_root` exactly `<spacetree repo>/tree-shared`;
+- the repo marker exists and is a symlink, and the shared marker, when present, is a symlink agreeing with it, with `shared_root` exactly `<spacetree repo>/tree-shared`;
+- a missing shared marker is reported as unbound, not as an error, since it is optional;
 - `.spacetree/machine-state-name` exists and holds a short label;
 - `.spacetree/shared-state/` is checked out on `PROTECTED/spacetree-shared-state`, and `.spacetree/machine-state/` on `PROTECTED/spacetree-state-for-<name>`;
 - every required registry entry has a location on this machine, and no entry names a path that is gone;
@@ -296,7 +308,8 @@ Registration is what makes a tree part of the spacetree, so the registry is a me
 
 Nothing resolves shared content by reading `spacetree.toml`.
 Consumers follow `<spacetree root>/.spacetree-shared-root`, and the marker alone says where shared content is.
-A missing or broken shared marker is a failure, never a fallback to the tree root, because the tree root does not hold these files — falling back would silently hand a project an empty instruction set.
+A missing or broken shared marker leaves the shared root unbound — `null` — and is never a fallback to the tree root, because that root does not hold these files; falling back would silently hand a project an empty instruction set.
+An absent marker is a tree that shares nothing, and a marker that cannot be honoured is warned about on stderr.
 
 The tree root itself holds no agent files.
 There is one shared copy, reached through the marker, and no second copy at the root to drift from it.
