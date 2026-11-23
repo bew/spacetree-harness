@@ -33,7 +33,6 @@
               cargo
               rustPackages.clippy
               rustfmt
-              bats
               jq
             ];
           };

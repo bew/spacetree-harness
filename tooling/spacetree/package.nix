@@ -1,7 +1,6 @@
 {
   lib,
   rustPlatform,
-  bats,
   jq,
   makeWrapper,
 }:
@@ -11,14 +10,14 @@ rustPlatform.buildRustPackage {
   pname = "spacetree";
   version = "0.1.0";
 
-  # Only what the crate build and the bats suite need.
+  # Only what the crate build and its tests need.
   src = lib.fileset.toSource {
     root = ./.;
     fileset = lib.fileset.unions [
       ./Cargo.toml
       ./Cargo.lock
       ./src
-      ./spacetree.bats
+      ./tests
     ];
   };
 
@@ -32,16 +31,6 @@ rustPlatform.buildRustPackage {
   # but putting it on PATH is what gives terminal users jq's colored output.
   postFixup = ''
     wrapProgram $out/bin/spacetree --prefix PATH : ${lib.makeBinPath [ jq ]}
-  '';
-
-  # The installed binary is what gets tested, so the suite runs after installPhase.
-  doCheck = false;
-
-  postInstall = ''
-    # The suite reads the binary from SPACETREE_BIN and parses its JSON with jq
-    PATH=${lib.makeBinPath [ jq ]}:$PATH \
-      SPACETREE_BIN=$out/bin/spacetree \
-      ${lib.getExe bats} spacetree.bats
   '';
 
   meta = {

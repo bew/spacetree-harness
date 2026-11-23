@@ -60,14 +60,18 @@ fn run_root(emit_json: bool) -> Result<()> {
     let spacetree_repo = get_spacetree_repo(&root)?;
     let spacetree_name = get_spacetree_name(&root);
 
-    let payload = format!(
+    print_json(&render_root_json(&root, &spacetree_repo, &spacetree_name));
+    Ok(())
+}
+
+/// Render the `root --json` payload for already resolved values.
+fn render_root_json(root: &Path, spacetree_repo: &Path, name: &str) -> String {
+    format!(
         "{{\"name\":{},\"path\":{},\"spacetree_repo\":{}}}",
-        json_string(&spacetree_name),
+        json_string(name),
         json_string(&root.display().to_string()),
         json_string(&spacetree_repo.display().to_string())
-    );
-    print_json(&payload);
-    Ok(())
+    )
 }
 
 /// Return the nearest ancestor of `start`, `start` included, holding the repo marker.
@@ -193,7 +197,156 @@ fn json_string(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::json_string;
+    use std::fs;
+    use std::os::unix::fs::symlink;
+
+    use tempfile::TempDir;
+
+    use super::*;
+
+    /// Build a temporary spacetree: `<tmp>/tree` holds a `.spacetree-repo` symlink to
+    /// `<tmp>/spacetree-home`, a sibling directory playing the repo.
+    ///
+    /// The marker holds a relative link on purpose, the form a real tree uses.
+    fn make_spacetree() -> TempDir {
+        let temp = TempDir::new().expect("create temp dir");
+        let tree = temp.path().join("tree");
+        let spacetree_repo = temp.path().join("spacetree-home");
+        fs::create_dir(&tree).expect("create tree dir");
+        fs::create_dir(&spacetree_repo).expect("create repo dir");
+        symlink("../spacetree-home", tree.join(MARKER_FILENAME)).expect("create marker");
+        temp
+    }
+
+    /// Canonical form of `temp/<name>`: `TempDir` hands out the non-canonical macOS path
+    /// (`/var/…`), while the tool resolves symlinks (`/private/var/…`).
+    fn canonical_member(temp: &TempDir, name: &str) -> PathBuf {
+        temp.path()
+            .canonicalize()
+            .expect("canonicalize temp dir")
+            .join(name)
+    }
+
+    #[test]
+    fn walk_up_finds_the_root_from_a_nested_directory() {
+        let temp = make_spacetree();
+        let nested = temp.path().join("tree/group/repo");
+        fs::create_dir_all(&nested).expect("create nested dirs");
+
+        let root = get_spacetree_root(&nested).expect("resolve root");
+
+        assert_eq!(root, temp.path().join("tree"));
+    }
+
+    #[test]
+    fn walk_up_prefers_the_nearest_root() {
+        let temp = make_spacetree();
+        let inner = temp.path().join("tree/inner");
+        fs::create_dir_all(inner.join("sub")).expect("create inner dirs");
+        fs::create_dir(temp.path().join("tree/inner-home")).expect("create inner repo");
+        symlink("../inner-home", inner.join(MARKER_FILENAME)).expect("create inner marker");
+
+        let root = get_spacetree_root(&inner.join("sub")).expect("resolve root");
+
+        assert_eq!(root, inner);
+    }
+
+    #[test]
+    fn walk_up_names_the_marker_when_none_exists() {
+        let temp = TempDir::new().expect("create temp dir");
+
+        let error = get_spacetree_root(temp.path()).expect_err("no marker must fail");
+
+        assert!(
+            format!("{error:#}").contains("no .spacetree-repo found above"),
+            "unexpected message: {error:#}"
+        );
+    }
+
+    #[test]
+    fn walk_up_finds_a_dangling_marker() {
+        let temp = TempDir::new().expect("create temp dir");
+        let tree = temp.path().join("tree");
+        fs::create_dir(&tree).expect("create tree dir");
+        symlink("../missing-repo", tree.join(MARKER_FILENAME)).expect("create marker");
+
+        let root = get_spacetree_root(&tree).expect("resolve root");
+
+        assert_eq!(root, tree);
+    }
+
+    #[test]
+    fn repo_resolution_follows_a_relative_target() {
+        let temp = make_spacetree();
+
+        let spacetree_repo = get_spacetree_repo(&temp.path().join("tree")).expect("resolve repo");
+
+        assert_eq!(spacetree_repo, canonical_member(&temp, "spacetree-home"));
+    }
+
+    #[test]
+    fn repo_resolution_rejects_a_plain_file_marker() {
+        let temp = TempDir::new().expect("create temp dir");
+        let tree = temp.path().join("tree");
+        fs::create_dir(&tree).expect("create tree dir");
+        fs::write(tree.join(MARKER_FILENAME), "").expect("create marker file");
+
+        let error = get_spacetree_repo(&tree).expect_err("marker file must fail");
+
+        assert!(
+            format!("{error:#}").contains("is not a symlink; it must point at the spacetree repo"),
+            "unexpected message: {error:#}"
+        );
+    }
+
+    #[test]
+    fn repo_resolution_names_a_missing_target() {
+        let temp = TempDir::new().expect("create temp dir");
+        let tree = temp.path().join("tree");
+        fs::create_dir(&tree).expect("create tree dir");
+        symlink("../missing-repo", tree.join(MARKER_FILENAME)).expect("create marker");
+
+        let error = get_spacetree_repo(&tree).expect_err("missing target must fail");
+
+        assert!(
+            format!("{error:#}").contains("points at ../missing-repo, which does not resolve"),
+            "unexpected message: {error:#}"
+        );
+    }
+
+    #[test]
+    fn repo_resolution_rejects_a_target_that_is_not_a_directory() {
+        let temp = TempDir::new().expect("create temp dir");
+        let tree = temp.path().join("tree");
+        fs::create_dir(&tree).expect("create tree dir");
+        fs::write(temp.path().join("not-a-repo"), "").expect("create plain file");
+        symlink("../not-a-repo", tree.join(MARKER_FILENAME)).expect("create marker");
+
+        let error = get_spacetree_repo(&tree).expect_err("file target must fail");
+
+        assert!(
+            format!("{error:#}").contains("which is not a directory"),
+            "unexpected message: {error:#}"
+        );
+    }
+
+    #[test]
+    fn root_json_carries_every_resolved_value() {
+        let payload = render_root_json(
+            Path::new("/trees/a tree"),
+            Path::new("/trees/spacetree-home"),
+            "work",
+        );
+
+        let parsed: serde_json::Value =
+            serde_json::from_str(&payload).expect("payload is valid JSON");
+
+        // Compact form pins the whole contract: field set, values, and absence of extras.
+        assert_eq!(
+            parsed.to_string(),
+            r#"{"name":"work","path":"/trees/a tree","spacetree_repo":"/trees/spacetree-home"}"#
+        );
+    }
 
     #[test]
     fn json_string_quotes_a_plain_value() {
