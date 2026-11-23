@@ -33,7 +33,7 @@ Each exposed on flake `packages.<system>.*`.
 - `wk` (planned): the task frontend (`wk`/`wkg`/`wkt`), whose `wk init` bootstraps a project's project info and beads workspace.
   (to understand why, read [my `bd init` complaints](./docs/beads-init-complaints.md))
 - `spacetree`: CLI over the spacetree itself.
-  For now only `spacetree root --json`, which walks up for the `.spacetree-repo` marker, follows it to the spacetree repo, and prints the name from that repo's `spacetree.toml` together with the root, the repo, the shared root, and the machine-state label.
+  For now only `spacetree info --json`, which walks up for the `.spacetree-repo` marker, follows it to the spacetree repo, and prints the name that repo's `spacetree.toml` declares together with the spacetree root and the repo path, all under a `spacetree` key.
 
 ## Status
 

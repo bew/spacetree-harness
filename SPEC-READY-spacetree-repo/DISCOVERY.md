@@ -20,7 +20,7 @@ That is the "spacetree config file as the source of truth" gap in `README.md`, a
 - `spacetree.toml` at the spacetree repo root declares the spacetree `name`; the directory basename is never the name.
 - `projects/<key>.toml` is the project info store for projects that link rather than track their project info.
 - Root resolution walks up for `.spacetree-repo`, resolves the symlink, and errors on every failure mode instead of falling back.
-- `spacetree root --json` reports the root, the repo, the shared marker target, and the declared name.
+- `spacetree info --json` reports the root, the repo, the shared marker target, and the declared name.
 - Runtime state stays in `<spacetree root>/.spacetree/`, never in the spacetree repo.
 
 ## Settled by the spec
@@ -49,4 +49,4 @@ One consumer already reads that material today (`integrations/opencode-plugin/sp
 - A project's own `AGENTS.md` and skills are read on top of the inherited copy, with the precedence fixed in *Inherited Content*.
 - `tree-shared/` is the final name.
 - Secrets stay in the environment; nothing secret goes in the spacetree repo.
-- `spacetree status` is a subcommand of the same binary that answers `spacetree root`.
+- `spacetree status` is a subcommand of the same binary that answers `spacetree info`.

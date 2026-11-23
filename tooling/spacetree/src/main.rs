@@ -1,4 +1,4 @@
-// Resolve the enclosing spacetree root and print it as JSON.
+// Resolve the enclosing spacetree and print what it resolves to.
 
 use std::env;
 use std::io::{self, IsTerminal, Write};
@@ -31,8 +31,8 @@ struct Cli {
 /// Subcommands the tool accepts.
 #[derive(Debug, Subcommand)]
 enum CliCommand {
-    /// Print the enclosing spacetree root
-    Root {
+    /// Print what the enclosing spacetree resolves to
+    Info {
         /// Emit JSON; required (only supported output for now)
         #[arg(long)]
         json: bool,
@@ -67,7 +67,7 @@ fn main() {
     let cli = Cli::parse();
 
     let outcome = match cli.command {
-        CliCommand::Root { json } => run_root(json),
+        CliCommand::Info { json } => run_info(json),
     };
 
     if let Err(error) = outcome {
@@ -77,28 +77,31 @@ fn main() {
     }
 }
 
-/// Print the enclosing spacetree root, the repo its marker points at, and its name.
+/// Print what the enclosing spacetree resolves to: its root, the repo its marker points at,
+/// and its declared name.
 ///
 /// Fails when `--json` is absent, matching the tool's current output contract.
-fn run_root(emit_json: bool) -> Result<()> {
-    ensure!(emit_json, "root requires --json");
+fn run_info(emit_json: bool) -> Result<()> {
+    ensure!(emit_json, "info requires --json");
 
     let start = env::current_dir()?;
     let root = get_spacetree_root(&start)?;
     let spacetree_repo = get_spacetree_repo(&root)?;
     let config = load_spacetree_config(&spacetree_repo)?;
 
-    print_json(&render_root_json(&root, &spacetree_repo, &config.name));
+    print_json(&render_info_json(&root, &spacetree_repo, &config.name));
     Ok(())
 }
 
-/// Render the `root --json` payload for already resolved values.
-fn render_root_json(root: &Path, spacetree_repo: &Path, name: &str) -> String {
+/// Render the `info --json` payload for already resolved values.
+///
+/// Paths stay absolute: consumers read them as paths, not as prose for humans.
+fn render_info_json(root: &Path, spacetree_repo: &Path, name: &str) -> String {
     format!(
-        "{{\"name\":{},\"path\":{},\"spacetree_repo\":{}}}",
+        "{{\"spacetree\":{{\"name\":{},\"repo\":{},\"root\":{}}}}}",
         json_string(name),
-        json_string(&root.display().to_string()),
-        json_string(&spacetree_repo.display().to_string())
+        json_string(&spacetree_repo.display().to_string()),
+        json_string(&root.display().to_string())
     )
 }
 
@@ -115,7 +118,7 @@ fn get_spacetree_root(start: &Path) -> Result<PathBuf> {
     marker_location.map(Path::to_path_buf).ok_or_else(|| {
         anyhow!(
             "no {MARKER_FILENAME} found above {}; the directory is not in a spacetree",
-            start.display()
+            display_path(start)
         )
     })
 }
@@ -133,7 +136,7 @@ fn get_spacetree_repo(root: &Path) -> Result<PathBuf> {
     ensure!(
         marker_metadata.file_type().is_symlink(),
         "{} is not a symlink; it must point at the spacetree repo",
-        marker_path.display()
+        display_path(&marker_path)
     );
 
     let link_target = std::fs::read_link(&marker_path)?;
@@ -143,8 +146,8 @@ fn get_spacetree_repo(root: &Path) -> Result<PathBuf> {
         eprintln!(
             "!! WARNING: {} points at {}, an absolute path; the marker is meant to hold \
              a path relative to the spacetree root",
-            marker_path.display(),
-            link_target.display()
+            display_path(&marker_path),
+            display_path(&link_target)
         );
     }
     // The link is stored relative to the marker's directory, so joining before resolving
@@ -153,16 +156,16 @@ fn get_spacetree_repo(root: &Path) -> Result<PathBuf> {
     let resolved = target.canonicalize().map_err(|error| {
         anyhow!(
             "{} points at {}, which does not resolve: {error}",
-            marker_path.display(),
-            link_target.display()
+            display_path(&marker_path),
+            display_path(&link_target)
         )
     })?;
 
     ensure!(
         resolved.is_dir(),
         "{} points at {}, which is not a directory",
-        marker_path.display(),
-        resolved.display()
+        display_path(&marker_path),
+        display_path(&resolved)
     );
 
     Ok(resolved)
@@ -176,10 +179,10 @@ fn get_spacetree_repo(root: &Path) -> Result<PathBuf> {
 fn load_spacetree_config(spacetree_repo: &Path) -> Result<SpacetreeConfig> {
     let config_path = spacetree_repo.join(CONFIG_FILENAME);
     let config_text = std::fs::read_to_string(&config_path)
-        .map_err(|error| anyhow!("{} cannot be read: {error}", config_path.display()))?;
+        .map_err(|error| anyhow!("{} cannot be read: {error}", display_path(&config_path)))?;
 
     let config_doc: SpacetreeConfigDocument = toml::from_str(&config_text)
-        .map_err(|error| anyhow!("{} does not parse: {error}", config_path.display()))?;
+        .map_err(|error| anyhow!("{} does not parse: {error}", display_path(&config_path)))?;
 
     let config = config_doc.spacetree;
     check_short_label(&config.name, &config_path, "name")?;
@@ -194,7 +197,7 @@ fn check_short_label(label: &str, source: &Path, field: &str) -> Result<()> {
     ensure!(
         is_short_label(label),
         "{} has {field} = {label:?}, which is not a short label: expected [a-z0-9][a-z0-9-]*",
-        source.display()
+        display_path(source)
     );
     Ok(())
 }
@@ -215,6 +218,28 @@ fn is_short_label(label: &str) -> bool {
     });
 
     first_is_allowed && rest_are_allowed
+}
+
+/// Render `path` for humans, with the home directory shortened to `~`.
+///
+/// Reads the home directory from the environment; without it, the path is rendered as is.
+fn display_path(path: &Path) -> String {
+    match env::var_os("HOME") {
+        Some(home) => shorten_home(path, Path::new(&home)),
+        None => path.display().to_string(),
+    }
+}
+
+/// Render `path` with `home` replaced by `~`, leaving paths outside `home` untouched.
+///
+/// Comparison is component-wise, so a sibling directory that merely shares the home name
+/// prefix (`/Users/ben` against `/Users/ben-x`) is not shortened.
+fn shorten_home(path: &Path, home: &Path) -> String {
+    match path.strip_prefix(home) {
+        Ok(relative) if relative.as_os_str().is_empty() => "~".to_string(),
+        Ok(relative) => format!("~/{}", relative.display()),
+        Err(_) => path.display().to_string(),
+    }
 }
 
 /// Print `payload` on a single line, pretty-printing through `jq` when stdout is a terminal.
@@ -519,8 +544,8 @@ variant = \"devtree\"
     }
 
     #[test]
-    fn root_json_carries_every_resolved_value() {
-        let payload = render_root_json(
+    fn info_json_carries_every_resolved_value() {
+        let payload = render_info_json(
             Path::new("/trees/a tree"),
             Path::new("/trees/spacetree-home"),
             "work",
@@ -532,7 +557,7 @@ variant = \"devtree\"
         // Compact form pins the whole contract: field set, values, and absence of extras.
         assert_eq!(
             parsed.to_string(),
-            r#"{"name":"work","path":"/trees/a tree","spacetree_repo":"/trees/spacetree-home"}"#
+            r#"{"spacetree":{"name":"work","repo":"/trees/spacetree-home","root":"/trees/a tree"}}"#
         );
     }
 
@@ -550,5 +575,33 @@ variant = \"devtree\"
     fn json_string_escapes_control_characters() {
         assert_eq!(json_string("a\tb"), "\"a\\tb\"");
         assert_eq!(json_string("a\u{1}b"), "\"a\\u0001b\"");
+    }
+
+    #[test]
+    fn shorten_home_renders_a_path_inside_home() {
+        let rendered = shorten_home(Path::new("/Users/ben/self/tree"), Path::new("/Users/ben"));
+
+        assert_eq!(rendered, "~/self/tree");
+    }
+
+    #[test]
+    fn shorten_home_renders_the_home_directory_itself() {
+        let rendered = shorten_home(Path::new("/Users/ben"), Path::new("/Users/ben"));
+
+        assert_eq!(rendered, "~");
+    }
+
+    #[test]
+    fn shorten_home_leaves_a_path_outside_home() {
+        let rendered = shorten_home(Path::new("/opt/tree"), Path::new("/Users/ben"));
+
+        assert_eq!(rendered, "/opt/tree");
+    }
+
+    #[test]
+    fn shorten_home_leaves_a_sibling_sharing_the_home_name_prefix() {
+        let rendered = shorten_home(Path::new("/Users/ben-x/tree"), Path::new("/Users/ben"));
+
+        assert_eq!(rendered, "/Users/ben-x/tree");
     }
 }

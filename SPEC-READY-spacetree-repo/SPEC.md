@@ -159,19 +159,24 @@ The spacetree root path is the directory holding the markers, not the spacetree 
 
 ## Interface / How to use
 
-`spacetree root --json` resolves every path the model defines, plus the name, in one call, so no consumer re-derives any of them:
+`spacetree info --json` resolves every path the model defines, plus the name, in one call, so no consumer re-derives any of them:
 
 ```json
 {
-  "name": "work",
-  "path": "/Users/…/work-stuff",
-  "spacetree_repo": "/Users/…/work-stuff/spacetree-home",
-  "shared_root": "/Users/…/work-stuff/spacetree-home/tree-shared",
-  "machine_state_name": "foo"
+  "spacetree": {
+    "name": "work",
+    "repo": "/Users/…/work-stuff/spacetree-home",
+    "root": "/Users/…/work-stuff",
+    "shared_root": "/Users/…/work-stuff/spacetree-home/tree-shared",
+    "machine_state_name": "foo"
+  }
 }
 ```
 
-`path` is the spacetree root — the directory holding the markers — and every other path in the answer hangs off it.
+`root` is the spacetree root — the directory holding the markers — and every other path in the
+answer hangs off it.
+The whole answer sits under one `spacetree` key, so a consumer that later asks for other subjects
+can tell them apart without guessing from the field set.
 
 `spacetree status` is the one place that verifies the bindings the rest of the design treats as invariants, and it exits non-zero when any is broken:
 
@@ -184,7 +189,7 @@ The spacetree root path is the directory holding the markers, not the spacetree 
 That last check is the reason protection appears twice in this design: the prefix states the intent, the forge enforces it, and nothing else would notice a rule that was never created.
 `spacetree init` cannot create the rule itself, so it prints the recipe when it creates a `PROTECTED/` branch and leaves the forge untouched.
 
-`spacetree status` is a subcommand of the same command that answers `spacetree root`, so one entry point both resolves and verifies.
+`spacetree status` is a subcommand of the same command that answers `spacetree info`, so one entry point both resolves and verifies.
 
 Verification stops there: a consumer resolves its path and proceeds, rather than re-running the checks on every read.
 
@@ -329,7 +334,7 @@ In scope:
 - `tree-shared/` and the inherited content it supplies.
 - The branch layout, the `PROTECTED/` convention, the state roots, and the machine-state name.
 - `spacetree init` as the only command that creates markers, state branches, and their checkouts.
-- The `spacetree root --json` shape and the `spacetree status` verification.
+- The `spacetree info --json` shape and the `spacetree status` verification.
 
 Out of scope:
 
@@ -459,6 +464,6 @@ The shared marker exists so that content resolution stops at the marker and neve
 - `<spec:spacetree-daemons>` — runtime state, the sockets under it, and the process tree.
 - `<spec:cross-spacetree-task-routing>` — spacetree root detection, spacetree names, and the known-spacetrees list.
 - `<spec:spacetree-rename>` — renaming a spacetree, which is constrained by the markers and the machine-state label.
-- `tooling/spacetree/spacetree` — the existing `spacetree root --json` implementation.
+- `tooling/spacetree/spacetree` — the existing `spacetree info --json` implementation.
 - `integrations/opencode-plugin/spacetree-context.ts` — the agent-side consumer that injects inherited skills and instructions.
 - `docs/what-is-a-spacetree.md` — the human-facing concept doc this spec's vocabulary has to stay compatible with.

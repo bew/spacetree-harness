@@ -75,25 +75,25 @@ fn stdout_text(output: &Output) -> String {
 }
 
 #[test]
-fn help_lists_the_root_subcommand() {
+fn help_lists_the_info_subcommand() {
     let temp = TempDir::new().expect("create temp dir");
 
     let output = run_cli(temp.path(), &["--help"]);
 
     assert!(output.status.success());
-    assert!(stdout_text(&output).contains("Print the enclosing spacetree root"));
+    assert!(stdout_text(&output).contains("Print what the enclosing spacetree resolves to"));
     assert!(!stderr_text(&output).contains("ERROR"));
 }
 
 #[test]
-fn root_without_json_fails_with_a_usage_error() {
+fn info_without_json_fails_with_a_usage_error() {
     let temp = make_spacetree();
 
-    let output = run_cli(&temp.path().join("tree"), &["root"]);
+    let output = run_cli(&temp.path().join("tree"), &["info"]);
 
     assert!(!output.status.success());
     assert!(
-        stderr_text(&output).contains("root requires --json"),
+        stderr_text(&output).contains("info requires --json"),
         "unexpected stderr: {}",
         stderr_text(&output)
     );
@@ -104,29 +104,29 @@ fn root_without_json_fails_with_a_usage_error() {
 }
 
 #[test]
-fn root_prints_one_line_of_json() {
+fn info_prints_one_line_of_json() {
     let temp = make_spacetree();
     let tree = temp.path().join("tree");
 
-    let output = run_cli(&tree, &["root", "--json"]);
+    let output = run_cli(&tree, &["info", "--json"]);
 
     assert!(output.status.success());
     let stdout = stdout_text(&output);
     assert_eq!(stdout.lines().count(), 1, "output must be a single line");
     let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
     assert_eq!(
-        parsed["name"], "work",
+        parsed["spacetree"]["name"], "work",
         "the name comes from the config, not from the `tree` directory basename"
     );
     assert_eq!(
-        parsed["path"],
+        parsed["spacetree"]["root"],
         canonical_member(&temp, "tree")
             .display()
             .to_string()
             .as_str()
     );
     assert_eq!(
-        parsed["spacetree_repo"],
+        parsed["spacetree"]["repo"],
         canonical_member(&temp, "spacetree-home")
             .display()
             .to_string()
@@ -139,10 +139,10 @@ fn root_prints_one_line_of_json() {
 }
 
 #[test]
-fn root_fails_outside_a_spacetree() {
+fn info_fails_outside_a_spacetree() {
     let temp = TempDir::new().expect("create temp dir");
 
-    let output = run_cli(temp.path(), &["root", "--json"]);
+    let output = run_cli(temp.path(), &["info", "--json"]);
 
     assert!(!output.status.success());
     assert!(
@@ -157,14 +157,14 @@ fn root_fails_outside_a_spacetree() {
 }
 
 #[test]
-fn root_warns_about_an_absolute_marker_target() {
+fn info_warns_about_an_absolute_marker_target() {
     let temp = make_spacetree();
     let tree = temp.path().join("tree");
     let spacetree_repo = temp.path().join("spacetree-home");
     fs::remove_file(tree.join(MARKER_FILENAME)).expect("remove relative marker");
     symlink(&spacetree_repo, tree.join(MARKER_FILENAME)).expect("create absolute marker");
 
-    let output = run_cli(&tree, &["root", "--json"]);
+    let output = run_cli(&tree, &["info", "--json"]);
 
     assert!(output.status.success());
     let stderr = stderr_text(&output);
@@ -179,7 +179,7 @@ fn root_warns_about_an_absolute_marker_target() {
     let parsed: serde_json::Value =
         serde_json::from_str(&stdout_text(&output)).expect("valid JSON");
     assert_eq!(
-        parsed["spacetree_repo"],
+        parsed["spacetree"]["repo"],
         canonical_member(&temp, "spacetree-home")
             .display()
             .to_string()
@@ -188,26 +188,26 @@ fn root_warns_about_an_absolute_marker_target() {
 }
 
 #[test]
-fn root_reports_the_declared_name_of_an_oddly_named_directory() {
+fn info_reports_the_declared_name_of_an_oddly_named_directory() {
     let temp = make_spacetree_named("odd-dir", "work");
     let tree = temp.path().join("odd-dir");
 
-    let output = run_cli(&tree, &["root", "--json"]);
+    let output = run_cli(&tree, &["info", "--json"]);
 
     assert!(output.status.success());
     let parsed: serde_json::Value =
         serde_json::from_str(&stdout_text(&output)).expect("valid JSON");
-    assert_eq!(parsed["name"], "work");
+    assert_eq!(parsed["spacetree"]["name"], "work");
 }
 
 #[test]
-fn root_fails_when_the_config_is_missing() {
+fn info_fails_when_the_config_is_missing() {
     let temp = make_spacetree();
     let tree = temp.path().join("tree");
     fs::remove_file(temp.path().join("spacetree-home").join(CONFIG_FILENAME))
         .expect("remove config");
 
-    let output = run_cli(&tree, &["root", "--json"]);
+    let output = run_cli(&tree, &["info", "--json"]);
 
     assert!(!output.status.success());
     assert!(
@@ -222,7 +222,7 @@ fn root_fails_when_the_config_is_missing() {
 }
 
 #[test]
-fn root_fails_when_the_config_has_no_name() {
+fn info_fails_when_the_config_has_no_name() {
     let temp = make_spacetree();
     let tree = temp.path().join("tree");
     fs::write(
@@ -231,7 +231,7 @@ fn root_fails_when_the_config_has_no_name() {
     )
     .expect("write nameless config");
 
-    let output = run_cli(&tree, &["root", "--json"]);
+    let output = run_cli(&tree, &["info", "--json"]);
 
     assert!(!output.status.success());
     let stderr = stderr_text(&output);
