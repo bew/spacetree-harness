@@ -38,11 +38,10 @@ rustPlatform.buildRustPackage {
   doCheck = false;
 
   postInstall = ''
-    # Point the test file at the binary this derivation just installed
-    substituteInPlace ./spacetree.bats \
-      --replace-fail 'SCRIPT_PATH="$SCRIPT_DIR/spacetree"' SCRIPT_PATH="$out/bin/spacetree"
-    # The suite parses the tool's JSON, so jq has to be reachable on PATH
-    PATH=${lib.makeBinPath [ jq ]}:$PATH ${lib.getExe bats} spacetree.bats
+    # The suite reads the binary from SPACETREE_BIN and parses its JSON with jq
+    PATH=${lib.makeBinPath [ jq ]}:$PATH \
+      SPACETREE_BIN=$out/bin/spacetree \
+      ${lib.getExe bats} spacetree.bats
   '';
 
   meta = {
