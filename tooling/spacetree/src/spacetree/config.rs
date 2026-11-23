@@ -2,10 +2,11 @@
 
 use std::path::Path;
 
-use anyhow::{Result, anyhow, ensure};
+use anyhow::{Result, anyhow};
 use serde::Deserialize;
 
 use super::display::display_path;
+use super::label::ensure_short_label;
 
 /// Filename of the config that a spacetree repo holds, declaring the spacetree's identity.
 pub(crate) const CONFIG_FILENAME: &str = "spacetree.toml";
@@ -48,39 +49,12 @@ pub(crate) fn load_spacetree_config(spacetree_repo: &Path) -> Result<SpacetreeCo
         .map_err(|error| anyhow!("{} does not parse: {error}", display_path(&config_path)))?;
 
     let config = config_doc.spacetree;
-    check_short_label(&config.name, &config_path, "name")?;
+    ensure_short_label(
+        &config.name,
+        &format!("{} name", display_path(&config_path)),
+    )?;
 
     Ok(config)
-}
-
-/// Check that `label`, declared as `field` in `source`, matches the short-label grammar.
-///
-/// Fails naming both the offending value and where it came from.
-fn check_short_label(label: &str, source: &Path, field: &str) -> Result<()> {
-    ensure!(
-        is_short_label(label),
-        "{} has {field} = {label:?}, which is not a short label: expected [a-z0-9][a-z0-9-]*",
-        display_path(source)
-    );
-    Ok(())
-}
-
-/// Report whether `label` matches the short-label grammar.
-///
-/// A short label starts with a lowercase letter or digit, and holds lowercase letters,
-/// digits, and hyphens after that.
-fn is_short_label(label: &str) -> bool {
-    let mut characters = label.chars();
-    let Some(first_character) = characters.next() else {
-        return false;
-    };
-
-    let first_is_allowed = first_character.is_ascii_lowercase() || first_character.is_ascii_digit();
-    let rest_are_allowed = characters.all(|character| {
-        character.is_ascii_lowercase() || character.is_ascii_digit() || character == '-'
-    });
-
-    first_is_allowed && rest_are_allowed
 }
 
 #[cfg(test)]
@@ -177,23 +151,5 @@ variant = \"devtree\"
             message.contains("not a short label"),
             "unexpected message: {message}"
         );
-    }
-
-    #[test]
-    fn short_label_check_accepts_valid_labels() {
-        let valid_labels = ["work", "w", "0", "work-2", "a-b-c", "work-"];
-
-        for label in valid_labels {
-            assert!(is_short_label(label), "{label:?} must be accepted");
-        }
-    }
-
-    #[test]
-    fn short_label_check_rejects_invalid_labels() {
-        let invalid_labels = ["", "-work", "Work", "work_tree", "work tree", "wörk", "a.b"];
-
-        for label in invalid_labels {
-            assert!(!is_short_label(label), "{label:?} must be rejected");
-        }
     }
 }

@@ -23,6 +23,15 @@ const TREE_SHARED_DIRNAME: &str = "tree-shared";
 /// Config filename, repeated for the same reason.
 const CONFIG_FILENAME: &str = "spacetree.toml";
 
+/// Directory holding the tree's unversioned state, repeated for the same reason.
+const SPACETREE_DIRNAME: &str = ".spacetree";
+
+/// Filename of the machine-state label inside that directory, repeated for the same reason.
+const MACHINE_STATE_NAME_FILENAME: &str = "machine-state-name";
+
+/// Label the fixtures record for the machine they stand for.
+const FIXTURE_MACHINE_STATE_NAME: &str = "fixture-box";
+
 /// Build a temporary spacetree whose tree directory is `tree` and whose config names it `work`.
 ///
 /// The two names differ on purpose: an assertion that reads the directory name instead of the
@@ -35,8 +44,9 @@ fn make_spacetree() -> TempDir {
 /// `declared_name`.
 ///
 /// `<tmp>/<tree_dir_name>` holds a `.spacetree-repo` symlink to `<tmp>/spacetree-home`, a
-/// sibling directory playing the repo, which holds the config file, and a
-/// `.spacetree-shared-root` symlink to that repo's `tree-shared/` directory.
+/// sibling directory playing the repo, which holds the config file, a
+/// `.spacetree-shared-root` symlink to that repo's `tree-shared/` directory, and a
+/// `.spacetree/machine-state-name` file.
 fn make_spacetree_named(tree_dir_name: &str, declared_name: &str) -> TempDir {
     let temp = TempDir::new().expect("create temp dir");
     let tree = temp.path().join(tree_dir_name);
@@ -56,7 +66,19 @@ fn make_spacetree_named(tree_dir_name: &str, declared_name: &str) -> TempDir {
         format!("[spacetree]\nname = \"{declared_name}\"\n"),
     )
     .expect("write config");
+    fs::create_dir(tree.join(SPACETREE_DIRNAME)).expect("create state dir");
+    fs::write(
+        machine_state_label_path(&tree),
+        format!("{FIXTURE_MACHINE_STATE_NAME}\n"),
+    )
+    .expect("write machine-state label");
     temp
+}
+
+/// Path of the machine-state label file inside the tree at `tree`.
+fn machine_state_label_path(tree: &Path) -> PathBuf {
+    tree.join(SPACETREE_DIRNAME)
+        .join(MACHINE_STATE_NAME_FILENAME)
 }
 
 /// Canonical form of `temp/<name>`: `TempDir` hands out the non-canonical macOS path
@@ -133,6 +155,8 @@ fn info_spells_a_repo_inside_the_root_relative_to_it() {
         "[spacetree]\nname = \"work\"\n",
     )
     .expect("write config");
+    fs::create_dir(tree.join(SPACETREE_DIRNAME)).expect("create state dir");
+    fs::write(machine_state_label_path(&tree), "fixture-box\n").expect("write machine-state label");
 
     let output = run_cli(&tree, &["info", "--json"]);
 
@@ -192,6 +216,10 @@ fn info_prints_one_line_of_json() {
             .display()
             .to_string()
             .as_str()
+    );
+    assert_eq!(
+        parsed["spacetree"]["machine_state_name"], FIXTURE_MACHINE_STATE_NAME,
+        "the label is read from the tree root's label file"
     );
     assert!(
         !stderr_text(&output).contains("WARNING"),
@@ -386,6 +414,83 @@ fn info_fails_when_the_config_is_missing() {
     assert!(
         stdout_text(&output).is_empty(),
         "a config failure must print no JSON"
+    );
+}
+
+#[test]
+fn info_reports_the_machine_state_label() {
+    let temp = make_spacetree();
+    let tree = temp.path().join("tree");
+    fs::write(machine_state_label_path(&tree), "foo\n").expect("write machine-state label");
+
+    let output = run_cli(&tree, &["info", "--json"]);
+
+    assert!(output.status.success());
+    let parsed: serde_json::Value =
+        serde_json::from_str(&stdout_text(&output)).expect("valid JSON");
+    assert_eq!(
+        parsed["spacetree"]["machine_state_name"], "foo",
+        "the trailing newline is trimmed rather than reported"
+    );
+}
+
+#[test]
+fn info_fails_when_the_machine_state_label_is_missing() {
+    let temp = make_spacetree();
+    let tree = temp.path().join("tree");
+    fs::remove_file(machine_state_label_path(&tree)).expect("remove machine-state label");
+
+    let output = run_cli(&tree, &["info", "--json"]);
+
+    assert!(!output.status.success());
+    assert!(
+        stderr_text(&output).contains(MACHINE_STATE_NAME_FILENAME),
+        "unexpected stderr: {}",
+        stderr_text(&output)
+    );
+    assert!(
+        stdout_text(&output).is_empty(),
+        "a missing label must print no JSON"
+    );
+}
+
+#[test]
+fn info_fails_when_the_machine_state_label_is_not_a_short_label() {
+    let temp = make_spacetree();
+    let tree = temp.path().join("tree");
+    fs::write(machine_state_label_path(&tree), "Foo Bar\n").expect("write bad label");
+
+    let output = run_cli(&tree, &["info", "--json"]);
+
+    assert!(!output.status.success());
+    let stderr = stderr_text(&output);
+    assert!(
+        stderr.contains(MACHINE_STATE_NAME_FILENAME) && stderr.contains("[a-z0-9][a-z0-9-]*"),
+        "the report must name the file and the grammar: {stderr}"
+    );
+    assert!(
+        stdout_text(&output).is_empty(),
+        "a bad label must print no JSON"
+    );
+}
+
+#[test]
+fn info_fails_when_the_machine_state_label_is_empty() {
+    let temp = make_spacetree();
+    let tree = temp.path().join("tree");
+    fs::write(machine_state_label_path(&tree), "\n").expect("write empty label");
+
+    let output = run_cli(&tree, &["info", "--json"]);
+
+    assert!(!output.status.success());
+    assert!(
+        stderr_text(&output).contains("not a short label"),
+        "unexpected stderr: {}",
+        stderr_text(&output)
+    );
+    assert!(
+        stdout_text(&output).is_empty(),
+        "an empty label must print no JSON"
     );
 }
 

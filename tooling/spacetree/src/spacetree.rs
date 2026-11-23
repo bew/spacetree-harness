@@ -5,6 +5,8 @@
 
 mod config;
 mod display;
+mod label;
+mod machine_state;
 mod marker;
 #[cfg(test)]
 pub(crate) mod test_support;
@@ -15,12 +17,14 @@ use anyhow::{Result, anyhow};
 use serde::Serialize;
 
 use config::load_spacetree_config;
+use machine_state::load_machine_state_name;
 use marker::{get_shared_root, get_spacetree_repo, get_spacetree_root};
 
 /// Everything the tree resolves to, gathered so a command asks once.
 ///
 /// Construction enforces what the spec treats as invariants: the markers exist, are symlinks,
-/// sit together, and the shared marker reaches exactly the repo's `tree-shared/` directory.
+/// sit together, the shared marker reaches exactly the repo's `tree-shared/` directory, and the
+/// machine-state label is recorded and well formed.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct SpacetreeContext {
     /// Directory holding the markers, which is what "the spacetree root" means.
@@ -34,6 +38,8 @@ pub(crate) struct SpacetreeContext {
     shared_root: Option<PathBuf>,
     /// Name the repo's config declares; never a directory basename.
     name: String,
+    /// Label naming this machine's state branch, read from the tree root; never the OS login.
+    machine_state_name: String,
 }
 
 impl SpacetreeContext {
@@ -43,12 +49,14 @@ impl SpacetreeContext {
         let repo = get_spacetree_repo(&root)?;
         let shared_root = get_shared_root(start, &root, &repo);
         let config = load_spacetree_config(&repo)?;
+        let machine_state_name = load_machine_state_name(&root)?;
 
         Ok(Self {
             root,
             repo,
             shared_root,
             name: config.name,
+            machine_state_name,
         })
     }
 
@@ -68,6 +76,7 @@ impl SpacetreeContext {
                     .shared_root
                     .as_deref()
                     .map(|path| render_path(path, &self.root)),
+                machine_state_name: &self.machine_state_name,
             },
         };
 
@@ -103,6 +112,7 @@ struct ResolvedBindings<'a> {
     repo: String,
     root: String,
     shared_root: Option<String>,
+    machine_state_name: &'a str,
 }
 
 #[cfg(test)]
@@ -110,7 +120,9 @@ mod tests {
     use std::fs;
 
     use super::*;
-    use test_support::{canonical_member, make_spacetree, write_spacetree_config};
+    use test_support::{
+        FIXTURE_MACHINE_STATE_NAME, canonical_member, make_spacetree, write_spacetree_config,
+    };
 
     #[test]
     fn resolve_carries_every_binding() {
@@ -129,6 +141,7 @@ mod tests {
                 repo: canonical_member(&temp, "spacetree-home"),
                 shared_root: Some(canonical_member(&temp, "spacetree-home/tree-shared")),
                 name: "work".to_string(),
+                machine_state_name: FIXTURE_MACHINE_STATE_NAME.to_string(),
             }
         );
     }
@@ -175,16 +188,13 @@ mod tests {
                 "/trees/work-stuff/spacetree-home/tree-shared",
             )),
             name: "work".to_string(),
+            machine_state_name: "foo".to_string(),
         };
 
-        let parsed: serde_json::Value =
-            serde_json::from_str(&context.render_json().expect("render the info payload"))
-                .expect("payload is valid JSON");
-
-        // Compact form pins the whole contract: field set, values, and absence of extras.
+        // The raw string pins the wire contract: field order, values, and absence of extras.
         assert_eq!(
-            parsed.to_string(),
-            r#"{"spacetree":{"name":"work","repo":"./spacetree-home","root":"/trees/work-stuff","shared_root":"./spacetree-home/tree-shared"}}"#
+            context.render_json().expect("render the info payload"),
+            r#"{"spacetree":{"name":"work","repo":"./spacetree-home","root":"/trees/work-stuff","shared_root":"./spacetree-home/tree-shared","machine_state_name":"foo"}}"#
         );
     }
 
@@ -195,15 +205,12 @@ mod tests {
             repo: PathBuf::from("/trees/spacetree-home"),
             shared_root: Some(PathBuf::from("/trees/spacetree-home/tree-shared")),
             name: "work".to_string(),
+            machine_state_name: "foo".to_string(),
         };
 
-        let parsed: serde_json::Value =
-            serde_json::from_str(&context.render_json().expect("render the info payload"))
-                .expect("payload is valid JSON");
-
         assert_eq!(
-            parsed.to_string(),
-            r#"{"spacetree":{"name":"work","repo":"/trees/spacetree-home","root":"/trees/a tree","shared_root":"/trees/spacetree-home/tree-shared"}}"#
+            context.render_json().expect("render the info payload"),
+            r#"{"spacetree":{"name":"work","repo":"/trees/spacetree-home","root":"/trees/a tree","shared_root":"/trees/spacetree-home/tree-shared","machine_state_name":"foo"}}"#
         );
     }
 
@@ -214,15 +221,12 @@ mod tests {
             repo: PathBuf::from("/trees/spacetree-home"),
             shared_root: None,
             name: "work".to_string(),
+            machine_state_name: "foo".to_string(),
         };
 
-        let parsed: serde_json::Value =
-            serde_json::from_str(&context.render_json().expect("render the info payload"))
-                .expect("payload is valid JSON");
-
         assert_eq!(
-            parsed.to_string(),
-            r#"{"spacetree":{"name":"work","repo":"/trees/spacetree-home","root":"/trees/a tree","shared_root":null}}"#
+            context.render_json().expect("render the info payload"),
+            r#"{"spacetree":{"name":"work","repo":"/trees/spacetree-home","root":"/trees/a tree","shared_root":null,"machine_state_name":"foo"}}"#
         );
     }
 }
