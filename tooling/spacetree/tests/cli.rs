@@ -14,15 +14,35 @@ const BINARY_PATH: &str = env!("CARGO_BIN_EXE_spacetree");
 /// Marker filename, repeated here because the crate exposes no library surface.
 const MARKER_FILENAME: &str = ".spacetree-repo";
 
-/// Build a temporary spacetree: `<tmp>/tree` holds a `.spacetree-repo` symlink to
-/// `<tmp>/spacetree-home`, a sibling directory playing the repo.
+/// Config filename, repeated for the same reason.
+const CONFIG_FILENAME: &str = "spacetree.toml";
+
+/// Build a temporary spacetree whose tree directory is `tree` and whose config names it `work`.
+///
+/// The two names differ on purpose: an assertion that reads the directory name instead of the
+/// declared one fails, so the fixture pins the independence between them.
 fn make_spacetree() -> TempDir {
+    make_spacetree_named("tree", "work")
+}
+
+/// Build a temporary spacetree in a directory named `tree_dir_name`, config naming it
+/// `declared_name`.
+///
+/// `<tmp>/<tree_dir_name>` holds a `.spacetree-repo` symlink to `<tmp>/spacetree-home`, a
+/// sibling directory playing the repo, which holds the config file.
+fn make_spacetree_named(tree_dir_name: &str, declared_name: &str) -> TempDir {
     let temp = TempDir::new().expect("create temp dir");
-    let tree = temp.path().join("tree");
+    let tree = temp.path().join(tree_dir_name);
     let spacetree_repo = temp.path().join("spacetree-home");
     fs::create_dir(&tree).expect("create tree dir");
     fs::create_dir(&spacetree_repo).expect("create repo dir");
+    // The marker holds a relative link on purpose, the form a real tree uses.
     symlink("../spacetree-home", tree.join(MARKER_FILENAME)).expect("create marker");
+    fs::write(
+        spacetree_repo.join(CONFIG_FILENAME),
+        format!("[spacetree]\nname = \"{declared_name}\"\n"),
+    )
+    .expect("write config");
     temp
 }
 
@@ -94,7 +114,10 @@ fn root_prints_one_line_of_json() {
     let stdout = stdout_text(&output);
     assert_eq!(stdout.lines().count(), 1, "output must be a single line");
     let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
-    assert_eq!(parsed["name"], "tree");
+    assert_eq!(
+        parsed["name"], "work",
+        "the name comes from the config, not from the `tree` directory basename"
+    );
     assert_eq!(
         parsed["path"],
         canonical_member(&temp, "tree")
@@ -161,5 +184,63 @@ fn root_warns_about_an_absolute_marker_target() {
             .display()
             .to_string()
             .as_str()
+    );
+}
+
+#[test]
+fn root_reports_the_declared_name_of_an_oddly_named_directory() {
+    let temp = make_spacetree_named("odd-dir", "work");
+    let tree = temp.path().join("odd-dir");
+
+    let output = run_cli(&tree, &["root", "--json"]);
+
+    assert!(output.status.success());
+    let parsed: serde_json::Value =
+        serde_json::from_str(&stdout_text(&output)).expect("valid JSON");
+    assert_eq!(parsed["name"], "work");
+}
+
+#[test]
+fn root_fails_when_the_config_is_missing() {
+    let temp = make_spacetree();
+    let tree = temp.path().join("tree");
+    fs::remove_file(temp.path().join("spacetree-home").join(CONFIG_FILENAME))
+        .expect("remove config");
+
+    let output = run_cli(&tree, &["root", "--json"]);
+
+    assert!(!output.status.success());
+    assert!(
+        stderr_text(&output).contains("spacetree.toml cannot be read"),
+        "unexpected stderr: {}",
+        stderr_text(&output)
+    );
+    assert!(
+        stdout_text(&output).is_empty(),
+        "a config failure must print no JSON"
+    );
+}
+
+#[test]
+fn root_fails_when_the_config_has_no_name() {
+    let temp = make_spacetree();
+    let tree = temp.path().join("tree");
+    fs::write(
+        temp.path().join("spacetree-home").join(CONFIG_FILENAME),
+        "[spacetree]\ndescription = \"no name here\"\n",
+    )
+    .expect("write nameless config");
+
+    let output = run_cli(&tree, &["root", "--json"]);
+
+    assert!(!output.status.success());
+    let stderr = stderr_text(&output);
+    assert!(
+        stderr.contains("spacetree.toml") && stderr.contains("missing field `name`"),
+        "unexpected stderr: {stderr}"
+    );
+    assert!(
+        stdout_text(&output).is_empty(),
+        "a config failure must print no JSON"
     );
 }
