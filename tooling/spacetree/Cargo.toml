@@ -1,0 +1,9 @@
+[package]
+name = "spacetree"
+description = "Spacetree CLI: resolve and inspect the enclosing spacetree root"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
